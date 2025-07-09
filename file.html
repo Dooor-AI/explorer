@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEE Complete Security Suite - Validation & Code Auditor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .emoji {
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><span class="emoji">🛡️</span> TEE Complete Security Suite</h1>
+        <p>Validate Google Cloud TEE attestation tokens and run transparent code audits to ensure you're communicating with a legitimate and secure Trusted Execution Environment.</p>
+
+        <!-- Quick Test Section -->
+        <div class="section">
+            <h2><span class="emoji">⚡</span> Quick Test with Live TEE</h2>
+            <p>Test with your actual TEE server:</p>
+            
+            <div class="input-group">
+                <label for="teeUrl">TEE Server URL:</label>
+                <input type="text" id="teeUrl" value="http://34.132.170.8:3000" placeholder="https://your-tee-server.com">
+            </div>
+
+            <button onclick="testLiveTEE()">🔗 Connect & Validate TEE</button>
+            <button onclick="quickValidation()">⚡ Quick Validation</button>
+            <button onclick="detailedValidation()">📊 Detailed Report</button>
+            <button onclick="validateSecurity()">🛡️ Security + Firewall Check</button>
+            <button onclick="completeValidation()">🔒 Complete TEE Validation</button>
+
+            <div id="quickResult"></div>
+        </div>
+
+        <!-- Manual JWT Test Section -->
+        <div class="section">
+            <h2><span class="emoji">🔍</span> Manual JWT Validation</h2>
+            <p>Paste a JWT token to validate manually:</p>
+            
+            <div class="input-group">
+                <label for="jwtInput">Attestation JWT:</label>
+                <input type="text" id="jwtInput" placeholder="eyJhbGciOiJSUzI1NiIs...">
+            </div>
+
+            <button onclick="validateManualJWT()">✅ Validate JWT</button>
+            <button onclick="decodeJWT()">🔍 Decode Only</button>
+
+            <div id="manualResult"></div>
+        </div>
+
+        <!-- TEE Code Auditor Section -->
+        <div class="section">
+            <h2><span class="emoji">🔍</span> TEE Transparent Code Auditor</h2>
+            <p>Execute transparent code auditing on the TEE server with cryptographic proof:</p>
+            
+            <button onclick="checkAuditorHealth()">🩺 Check Auditor Health</button>
+            <button onclick="runTransparentAudit()">🔍 Run Code Audit</button>
+            <button onclick="getAuditResults()">📊 Get Latest Results</button>
+            <button onclick="getExecutionLog()">📝 Execution Log</button>
+            <button onclick="getVerificationInfo()">🔐 Verification Info</button>
+
+            <div id="auditorResult"></div>
+        </div>
+
+        <!-- TEE Operation Logs Section -->
+        <div class="section">
+            <h2><span class="emoji">📊</span> TEE Operation Transparency</h2>
+            <p>Real-time view of all API operations executed inside the TEE (no sensitive data exposed):</p>
+            
+            <button onclick="getOperationLogs()">🔄 Refresh Operations</button>
+            <button onclick="getOperationStats()">📈 Statistics</button>
+            <input type="number" id="operationLimit" placeholder="Limit (20)" style="width: 100px; margin: 0 10px;">
+            <button onclick="clearOperationDisplay()">🗑️ Clear</button>
+
+            <div id="operationStats" style="margin-top: 10px; display: none;"></div>
+            <div id="operationLogs" style="margin-top: 10px;">
+                <div class="status info">Click "Refresh Operations" to see real-time TEE activity</div>
+            </div>
+        </div>
+
+        <!-- Integration Example -->
+        <div class="section">
+            <h2><span class="emoji">⚙️</span> Integration Example</h2>
+            <p>Here's how to use this in your application:</p>
+            
+            <div class="details">
+<strong>// 1. Initialize validator</strong>
+const validator = new TEEAttestationValidator({
+    projectId: 'dooor-core',
+    zone: 'us-central1-a', 
+    instanceName: 'tee-vm1'
+});
+
+<strong>// 2. Get attestation from TEE</strong>
+async function connectToTEE() {
+    try {
+        const response = await fetch('https://your-tee-server.com/v1/tee/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const { attestation_jwt } = await response.json();
+        
+        <strong>// 3. Validate the attestation</strong>
+        const isValid = await validator.isValidTEE(attestation_jwt);
+        
+        if (isValid) {
+            console.log('✅ TEE is legitimate - safe to send sensitive data');
+            
+            <strong>// 4. Now you can safely interact with the TEE</strong>
+            await sendSensitiveData();
+        } else {
+            console.log('❌ TEE validation failed - do not trust this server');
+        }
+        
+    } catch (error) {
+        console.error('Connection failed:', error);
+    }
+}
+
+<strong>// 5. Send sensitive data to validated TEE</strong>
+async function sendSensitiveData() {
+    await fetch('https://your-tee-server.com/v1/sensitive-endpoint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            secret: 'sensitive information',
+            private_key: 'your-private-key'
+        })
+    });
+}
+            </div>
+        </div>
+    </div>
+
+    <!-- Include the validator script -->
+    <script src="tee-client-validator.js"></script>
+    
+    <script>
+        let validator = new TEEAttestationValidator({
+            projectId: 'dooor-core',
+            zone: 'us-central1-a',
+            instanceName: 'tee-vm1'
+        });
+
+        // Test with live TEE server
+        async function testLiveTEE() {
+            const url = document.getElementById('teeUrl').value;
+            const resultDiv = document.getElementById('quickResult');
+            
+            resultDiv.innerHTML = '<div class="status warning">🔄 Connecting to TEE...</div>';
+            
+            try {
+                const response = await fetch(`${url}/v1/tee/connect`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Extract the JWT from the response - handle both direct JWT and nested object
+                let attestationJWT;
+                if (typeof data === 'string') {
+                    attestationJWT = data; // Direct JWT string
+                } else if (data.attestation_jwt) {
+                    attestationJWT = data.attestation_jwt; // Nested in object
+                } else {
+                    throw new Error('No attestation_jwt found in response');
+                }
+                
+                const report = await validator.getValidationReport(attestationJWT);
+                displayValidationResult(report, resultDiv);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Connection failed: ${error.message}</div>`;
+            }
+        }
+
+        // Quick validation
+        async function quickValidation() {
+            const url = document.getElementById('teeUrl').value;
+            const resultDiv = document.getElementById('quickResult');
+            
+            try {
+                const response = await fetch(`${url}/v1/tee/connect`, { method: 'POST' });
+                const data = await response.json();
+                
+                // Extract the JWT from the response
+                const attestationJWT = typeof data === 'string' ? data : data.attestation_jwt;
+                if (!attestationJWT) {
+                    throw new Error('No attestation_jwt found in response');
+                }
+                
+                const isValid = await validator.isValidTEE(attestationJWT);
+                
+                if (isValid) {
+                    resultDiv.innerHTML = '<div class="status success">✅ TEE is legitimate and trusted!</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="status error">❌ TEE validation failed - not trusted</div>';
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Detailed validation
+        async function detailedValidation() {
+            const url = document.getElementById('teeUrl').value;
+            const resultDiv = document.getElementById('quickResult');
+            
+            try {
+                const response = await fetch(`${url}/v1/tee/connect`, { method: 'POST' });
+                const data = await response.json();
+                
+                // Extract the JWT from the response
+                const attestationJWT = typeof data === 'string' ? data : data.attestation_jwt;
+                if (!attestationJWT) {
+                    throw new Error('No attestation_jwt found in response');
+                }
+                
+                const report = await validator.getValidationReport(attestationJWT);
+                displayValidationResult(report, resultDiv);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Validate manual JWT
+        async function validateManualJWT() {
+            const jwt = document.getElementById('jwtInput').value.trim();
+            const resultDiv = document.getElementById('manualResult');
+            
+            if (!jwt) {
+                resultDiv.innerHTML = '<div class="status error">❌ Please enter a JWT token</div>';
+                return;
+            }
+            
+            try {
+                const report = await validator.getValidationReport(jwt);
+                displayValidationResult(report, resultDiv);
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Validation error: ${error.message}</div>`;
+            }
+        }
+
+        // Decode JWT without validation
+        function decodeJWT() {
+            const jwt = document.getElementById('jwtInput').value.trim();
+            const resultDiv = document.getElementById('manualResult');
+            
+            if (!jwt) {
+                resultDiv.innerHTML = '<div class="status error">❌ Please enter a JWT token</div>';
+                return;
+            }
+            
+            try {
+                const decoded = validator.decodeJWT(jwt);
+                if (decoded) {
+                    resultDiv.innerHTML = `
+                        <div class="status success">✅ JWT decoded successfully</div>
+                        <div class="details">
+                            <strong>Header:</strong><br>
+                            ${JSON.stringify(decoded.header, null, 2)}
+                            <br><br>
+                            <strong>Payload:</strong><br>
+                            ${JSON.stringify(decoded.payload, null, 2)}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<div class="status error">❌ Invalid JWT format</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Decode error: ${error.message}</div>`;
+            }
+        }
+
+        // Display validation result
+        function displayValidationResult(report, container) {
+            const statusClass = report.valid ? 'success' : 'error';
+            const statusIcon = report.valid ? '✅' : '❌';
+            
+            let html = `
+                <div class="status ${statusClass}">
+                    ${statusIcon} ${report.valid ? 'TEE Validation Successful' : 'TEE Validation Failed'}
+                </div>
+                
+                <div class="details">
+                    <strong>Summary:</strong><br>
+                    • Trusted: ${report.summary.trusted}<br>
+                    • Hardware: ${report.summary.hardware}<br>
+                    • Project: ${report.summary.project}<br>
+                    • Instance: ${report.summary.instance}<br>
+                    • Zone: ${report.summary.zone}<br>
+            `;
+            
+            if (report.errors && report.errors.length > 0) {
+                html += `<br><strong>Errors:</strong><br>`;
+                report.errors.forEach(error => {
+                    html += `• ${error}<br>`;
+                });
+            }
+            
+            if (report.claims) {
+                html += `
+                    <br><strong>Full Claims:</strong><br>
+                    ${JSON.stringify(report.claims, null, 2)}
+                `;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Validate security configuration (firewall + HTTP logs)
+        async function validateSecurity() {
+            const url = document.getElementById('teeUrl').value;
+            const resultDiv = document.getElementById('quickResult');
+            
+            resultDiv.innerHTML = '<div class="status warning">🔄 Checking security configuration...</div>';
+            
+            try {
+                const securityReport = await validator.validateSecurityConfiguration(url);
+                displaySecurityResult(securityReport, resultDiv);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Security check failed: ${error.message}</div>`;
+            }
+        }
+
+        // Complete validation (JWT + Security + Firewall)
+        async function completeValidation() {
+            const url = document.getElementById('teeUrl').value;
+            const resultDiv = document.getElementById('quickResult');
+            
+            resultDiv.innerHTML = '<div class="status warning">🔄 Running complete TEE validation...</div>';
+            
+            try {
+                const completeReport = await validator.validateCompleteTEE(url);
+                displayCompleteResult(completeReport, resultDiv);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Complete validation failed: ${error.message}</div>`;
+            }
+        }
+
+        // Display security validation result
+        function displaySecurityResult(report, container) {
+            const statusClass = report.valid ? 'success' : 'error';
+            const statusIcon = report.valid ? '✅' : '❌';
+            
+            let html = `
+                <div class="status ${statusClass}">
+                    ${statusIcon} ${report.valid ? 'Security Configuration Valid' : 'Security Issues Found'}
+                </div>
+                
+                <div class="details">
+                    <strong>Security Summary:</strong><br>
+                    • Firewall Active: ${report.summary.firewall_active ? 'Yes' : 'No'}<br>
+                    • Whitelisted Domains: ${report.summary.whitelisted_domains}<br>
+                    • Total HTTP Calls: ${report.summary.total_http_calls}<br>
+                    • Last Updated: ${report.summary.last_updated}<br>
+            `;
+            
+            if (report.errors && report.errors.length > 0) {
+                html += `<br><strong>🚨 Errors:</strong><br>`;
+                report.errors.forEach(error => {
+                    html += `• ${error}<br>`;
+                });
+            }
+
+            if (report.warnings && report.warnings.length > 0) {
+                html += `<br><strong>⚠️ Warnings:</strong><br>`;
+                report.warnings.forEach(warning => {
+                    html += `• ${warning}<br>`;
+                });
+            }
+            
+            if (report.securityConfig) {
+                html += `
+                    <br><strong>🛡️ Firewall Configuration:</strong><br>
+                    ${JSON.stringify(report.securityConfig.allowed_domains, null, 2)}
+                `;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Display complete validation result
+        function displayCompleteResult(report, container) {
+            const statusClass = report.valid ? 'success' : 'error';
+            const statusIcon = report.valid ? '✅' : '❌';
+            
+            let html = `
+                <div class="status ${statusClass}">
+                    ${statusIcon} ${report.valid ? 'TEE Completely Trusted' : 'TEE Trust Issues Found'}
+                </div>
+                
+                <div class="details">
+                    <strong>🔒 Complete Trust Summary:</strong><br>
+                    • TEE Authentic: ${report.summary.tee_authentic ? 'Yes' : 'No'}<br>
+                    • Firewall Secure: ${report.summary.firewall_secure ? 'Yes' : 'No'}<br>
+                    • Overall Trusted: ${report.summary.overall_trusted ? 'Yes' : 'No'}<br>
+                    • Hardware: ${report.summary.hardware}<br>
+                    • Project: ${report.summary.project}<br>
+                    • Instance: ${report.summary.instance}<br>
+                    • Zone: ${report.summary.zone}<br>
+                    • Whitelisted Domains: ${report.summary.whitelisted_domains}<br>
+            `;
+            
+            // Show JWT validation details
+            if (report.jwt_validation && report.jwt_validation.errors && report.jwt_validation.errors.length > 0) {
+                html += `<br><strong>🚨 JWT Errors:</strong><br>`;
+                report.jwt_validation.errors.forEach(error => {
+                    html += `• ${error}<br>`;
+                });
+            }
+
+            // Show security validation details
+            if (report.security_validation && report.security_validation.errors && report.security_validation.errors.length > 0) {
+                html += `<br><strong>🛡️ Security Errors:</strong><br>`;
+                report.security_validation.errors.forEach(error => {
+                    html += `• ${error}<br>`;
+                });
+            }
+
+            if (report.security_validation && report.security_validation.warnings && report.security_validation.warnings.length > 0) {
+                html += `<br><strong>⚠️ Security Warnings:</strong><br>`;
+                report.security_validation.warnings.forEach(warning => {
+                    html += `• ${warning}<br>`;
+                });
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // TEE Code Auditor Functions
+        
+        // Check auditor health
+        async function checkAuditorHealth() {
+            const url = document.getElementById('teeUrl').value;
+            const resultDiv = document.getElementById('auditorResult');
+            
+            resultDiv.innerHTML = '<div class="status warning">🔄 Checking auditor health...</div>';
+            
+            try {
+                const response = await fetch(`${url}/v1/tee/auditor/health`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayAuditorHealth(data, resultDiv);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Health check failed: ${error.message}</div>`;
+            }
+        }
+
+        // Run transparent audit
+        async function runTransparentAudit() {
+            const url = document.getElementById('teeUrl').value;
+            const resultDiv = document.getElementById('auditorResult');
+            
+            resultDiv.innerHTML = '<div class="status warning">🔄 Running transparent code audit... This may take a few minutes.</div>';
+            
+            try {
+                const response = await fetch(`${url}/v1/tee/auditor/run`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayAuditResult(data, resultDiv);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Audit failed: ${error.message}</div>`;
+            }
+        }
+
+        // Get latest audit results
+        async function getAuditResults() {
+            const url = document.getElementById('teeUrl').value;
+            const resultDiv = document.getElementById('auditorResult');
+            
+            resultDiv.innerHTML = '<div class="status warning">🔄 Fetching audit results...</div>';
+            
+            try {
+                const response = await fetch(`${url}/v1/tee/auditor/results`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayDetailedAuditResults(data, resultDiv);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Failed to get results: ${error.message}</div>`;
+            }
+        }
+
+        // Get execution log
+        async function getExecutionLog() {
+            const url = document.getElementById('teeUrl').value;
+            const resultDiv = document.getElementById('auditorResult');
+            
+            resultDiv.innerHTML = '<div class="status warning">🔄 Fetching execution log...</div>';
+            
+            try {
+                const response = await fetch(`${url}/v1/tee/auditor/execution-log`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayExecutionLog(data, resultDiv);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Failed to get execution log: ${error.message}</div>`;
+            }
+        }
+
+        // Get verification info
+        async function getVerificationInfo() {
+            const url = document.getElementById('teeUrl').value;
+            const resultDiv = document.getElementById('auditorResult');
+            
+            resultDiv.innerHTML = '<div class="status warning">🔄 Fetching verification info...</div>';
+            
+            try {
+                const response = await fetch(`${url}/v1/tee/auditor/verification`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayVerificationInfo(data, resultDiv);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Failed to get verification info: ${error.message}</div>`;
+            }
+        }
+
+        // Display auditor health
+        function displayAuditorHealth(data, container) {
+            const statusClass = data.status === 'healthy' ? 'success' : 'error';
+            const statusIcon = data.status === 'healthy' ? '✅' : '❌';
+            
+            let html = `
+                <div class="status ${statusClass}">
+                    ${statusIcon} ${data.message}
+                </div>
+                
+                <div class="details">
+                    <strong>Auditor Status:</strong><br>
+                    • GitHub Access: ${data.capabilities?.github_access ? 'Yes' : 'No'}<br>
+                    • File Reading: ${data.capabilities?.file_reading ? 'Yes' : 'No'}<br>
+                    • Cryptographic Proof: ${data.capabilities?.cryptographic_proof ? 'Yes' : 'No'}<br>
+                    • TEE Attestation: ${data.capabilities?.tee_attestation ? 'Yes' : 'No'}<br>
+                    • Last Check: ${data.last_health_check}<br>
+                    • Source: <a href="${data.auditor_source}" target="_blank">${data.auditor_source}</a>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        // Display audit result
+        function displayAuditResult(data, container) {
+            const statusClass = 'success';
+            const statusIcon = '✅';
+            
+            let html = `
+                <div class="status ${statusClass}">
+                    ${statusIcon} ${data.message}
+                </div>
+                
+                <div class="details">
+                    <strong>Audit Summary:</strong><br>
+                    • Session ID: ${data.session_id}<br>
+                    • Files Analyzed: ${data.summary?.files_analyzed || 0}<br>
+                    • Security Score: ${data.summary?.security_score || 'N/A'}<br>
+                    • Critical Findings: ${data.summary?.critical_findings || 0}<br>
+                    <br>
+                    <strong>🔐 Verification:</strong><br>
+                    • Auditor Hash: ${data.verification?.auditor_hash?.substring(0, 16)}...<br>
+                    • Execution Chain Hash: ${data.verification?.execution_chain_hash?.substring(0, 16)}...<br>
+                    • TEE Signature: ${data.verification?.tee_signature?.substring(0, 16)}...<br>
+                    <br>
+                    <strong>🌐 Transparency:</strong><br>
+                    • Public Auditor: <a href="${data.transparency_proof?.public_auditor_url}" target="_blank">GitHub Source</a><br>
+                    • Execution Steps: ${data.transparency_proof?.execution_steps}<br>
+                    • Timestamp: ${data.transparency_proof?.timestamp}
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        // Display detailed audit results
+        function displayDetailedAuditResults(data, container) {
+            const html = `
+                <div class="status success">
+                    ✅ Detailed Audit Results (Session: ${data.session_id})
+                </div>
+                
+                <div class="details">
+                    <strong>📊 Analysis Results:</strong><br>
+                    ${JSON.stringify(data.audit_results, null, 2)}
+                    <br><br>
+                    <strong>🔐 Verification:</strong><br>
+                    • Auditor Code Hash: ${data.verification?.auditor_code_hash}<br>
+                    • Public Source: <a href="${data.verification?.public_source}" target="_blank">GitHub Repository</a><br>
+                    • Execution Chain Hash: ${data.verification?.execution_chain_hash}<br>
+                    • TEE Signature: ${data.verification?.tee_signature}<br>
+                    <br>
+                    <strong>📈 Execution Summary:</strong><br>
+                    • Total Steps: ${data.execution_summary?.total_steps}<br>
+                    • Execution Time: ${data.execution_summary?.execution_time}
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        // Display execution log
+        function displayExecutionLog(data, container) {
+            const html = `
+                <div class="status success">
+                    ✅ Execution Log (Session: ${data.session_id})
+                </div>
+                
+                <div class="details">
+                    <strong>🔗 Verification Info:</strong><br>
+                    • Each Step Hashed: ${data.verification_info?.each_step_is_hashed ? 'Yes' : 'No'}<br>
+                    • Hash Chain Verified: ${data.verification_info?.hash_chain_verified ? 'Yes' : 'No'}<br>
+                    • Cryptographic Proof: ${data.verification_info?.cryptographic_proof}<br>
+                    <br>
+                    <strong>📝 Execution Trace:</strong><br>
+                    ${JSON.stringify(data.execution_trace, null, 2)}
+                    <br><br>
+                    <strong>💡 Transparency Notes:</strong><br>
+                    ${data.transparency_notes?.map(note => `• ${note}`).join('<br>') || ''}
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        // Display verification info
+        function displayVerificationInfo(data, container) {
+            const html = `
+                <div class="status success">
+                    ✅ Auditor Verification Information
+                </div>
+                
+                <div class="details">
+                    <strong>🌐 Auditor Transparency:</strong><br>
+                    • Public Repository: <a href="${data.auditor_transparency?.public_repository}" target="_blank">${data.auditor_transparency?.public_repository}</a><br>
+                    • Source Code URL: <a href="${data.auditor_transparency?.source_code_url}" target="_blank">Download auditor.js</a><br>
+                    <br>
+                    <strong>✅ Verification Steps:</strong><br>
+                    ${data.auditor_transparency?.verification_instructions?.map(step => `• ${step}`).join('<br>') || ''}
+                    <br><br>
+                    <strong>🔐 Latest Audit:</strong><br>
+                    ${data.latest_audit ? `
+                    • Session ID: ${data.latest_audit.session_id}<br>
+                    • Code Hash: ${data.latest_audit.auditor_code_hash}<br>
+                    • Chain Hash: ${data.latest_audit.execution_chain_hash}<br>
+                    • TEE Signature: ${data.latest_audit.tee_signature}<br>
+                    • Timestamp: ${data.latest_audit.timestamp}
+                    ` : '• No audit executed yet'}
+                    <br><br>
+                    <strong>🔗 Endpoints:</strong><br>
+                    • Run Audit: ${data.verification_endpoints?.run_audit}<br>
+                    • Get Results: ${data.verification_endpoints?.get_results}<br>
+                    • Execution Log: ${data.verification_endpoints?.execution_log}
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', function() {
+            console.log('🛡️ TEE Attestation Validator loaded');
+            console.log('🔍 TEE Code Auditor loaded');
+            console.log('Use the buttons above to test TEE validation and code auditing');
+        });
+        // TEE Operation Logs Functions
+        async function getOperationLogs() {
+            const url = document.getElementById('teeUrl').value;
+            const resultDiv = document.getElementById('operationLogs');
+            const limit = document.getElementById('operationLimit').value || 20;
+            
+            try {
+                resultDiv.innerHTML = '<div class="status warning">🔄 Loading operation logs...</div>';
+                
+                const response = await fetch(`${url}/v1/tee/operations?limit=${limit}`);
+                const data = await response.json();
+                
+                if (response.ok && data.operations) {
+                    let html = `
+                        <div class="status success">✅ TEE Operation Logs (Last ${data.operations.length})</div>
+                        <div class="details">
+                            <strong>Total Operations:</strong> ${data.total_operations}<br>
+                            <strong>Last Updated:</strong> ${new Date(data.last_updated).toLocaleString()}<br>
+                            <strong>TEE Verification:</strong> ${data.tee_verification}
+                        </div>
+                        <table style="width: 100%; margin-top: 15px; border-collapse: collapse; font-size: 12px;">
+                            <thead>
+                                <tr style="background-color: #f8f9fa;">
+                                    <th style="border: 1px solid #ddd; padding: 8px;">Time</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px;">Method</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px;">Endpoint</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px;">Duration</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px;">Status</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px;">User</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px;">Hash</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.operations.reverse().forEach(op => {
+                        const time = new Date(op.timestamp).toLocaleTimeString();
+                        const userShort = op.user_id.substring(0, 8) + (op.user_id.length > 8 ? '...' : '');
+                        const hashShort = op.operation_hash.substring(0, 8) + '...';
+                        const statusColor = op.status_code < 400 ? '#28a745' : '#dc3545';
+                        
+                        html += `
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 6px; font-family: monospace;">${time}</td>
+                                <td style="border: 1px solid #ddd; padding: 6px; font-weight: bold;">${op.method}</td>
+                                <td style="border: 1px solid #ddd; padding: 6px; font-family: monospace;">${op.endpoint}</td>
+                                <td style="border: 1px solid #ddd; padding: 6px;">${op.execution_time_ms}ms</td>
+                                <td style="border: 1px solid #ddd; padding: 6px; color: ${statusColor}; font-weight: bold;">${op.status_code}</td>
+                                <td style="border: 1px solid #ddd; padding: 6px; font-family: monospace;">${userShort}</td>
+                                <td style="border: 1px solid #ddd; padding: 6px; font-family: monospace; cursor: pointer;" 
+                                    onclick="getOperationDetails('${op.id}')" 
+                                    title="Click to see details">${hashShort}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `<div class="status error">❌ Failed to load operation logs</div>`;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Connection failed: ${error.message}</div>`;
+            }
+        }
+
+        async function getOperationStats() {
+            const url = document.getElementById('teeUrl').value;
+            const statsDiv = document.getElementById('operationStats');
+            
+            try {
+                const response = await fetch(`${url}/v1/tee/operations?limit=1`);
+                const data = await response.json();
+                
+                if (response.ok && data.statistics) {
+                    const stats = data.statistics;
+                    statsDiv.innerHTML = `
+                        <div class="status info">📈 TEE Operations Statistics</div>
+                        <div class="details">
+                            <strong>Total Operations:</strong> ${stats.total_operations}<br>
+                            <strong>Last Hour:</strong> ${stats.operations_last_hour}<br>
+                            <strong>Last 24h:</strong> ${stats.operations_last_24h}<br>
+                            <strong>Avg Execution Time:</strong> ${stats.average_execution_time_ms}ms<br>
+                            <strong>Unique Endpoints:</strong> ${stats.endpoints_called}<br>
+                            <strong>Active Users:</strong> ${stats.users_active}
+                        </div>
+                    `;
+                    statsDiv.style.display = 'block';
+                } else {
+                    statsDiv.innerHTML = `<div class="status error">❌ Failed to load statistics</div>`;
+                    statsDiv.style.display = 'block';
+                }
+                
+            } catch (error) {
+                statsDiv.innerHTML = `<div class="status error">❌ Connection failed: ${error.message}</div>`;
+                statsDiv.style.display = 'block';
+            }
+        }
+
+        async function getOperationDetails(operationId) {
+            const url = document.getElementById('teeUrl').value;
+            
+            try {
+                const response = await fetch(`${url}/v1/tee/operations/${operationId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`
+Operation Details:
+────────────────────
+ID: ${data.operation.id}
+Time: ${new Date(data.operation.timestamp).toLocaleString()}
+Method: ${data.operation.method}
+Endpoint: ${data.operation.endpoint}
+Duration: ${data.operation.execution_time_ms}ms
+Status: ${data.operation.status_code}
+User: ${data.operation.user_id}
+Hash: ${data.operation.operation_hash}
+TEE Attestation: ${data.operation.tee_attestation_snippet}
+
+✅ ${data.verification_note}
+🔐 ${data.hash_verification}
+                    `);
+                } else {
+                    alert('❌ Failed to load operation details');
+                }
+                
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+            }
+        }
+
+        function clearOperationDisplay() {
+            document.getElementById('operationLogs').innerHTML = '<div class="status info">Click "Refresh Operations" to see real-time TEE activity</div>';
+            document.getElementById('operationStats').style.display = 'none';
+        }
+
+    </script>
+</body>
+</html> 

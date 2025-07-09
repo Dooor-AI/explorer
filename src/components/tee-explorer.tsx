@@ -61,7 +61,6 @@ import {
   TEEValidationReport, 
   TEEAuditResult, 
   TEEAuditHealth,
-  TEEOperationsLog
 } from '@/lib/types'
 import TeeOperations from './tee-operations'
 
