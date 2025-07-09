@@ -43,8 +43,42 @@ export interface TEEConnection {
 }
 
 export interface TEEAuditResult {
-  session_id: string
-  message: string
+  session_id?: string
+  message?: string
+  action?: string
+  
+  // Hash verification
+  auditor_hash?: string
+  last_updated?: string
+  version?: string
+  source_repo?: string
+  included_files?: string[]
+  
+  // Complete verification
+  auditor_verified?: boolean
+  health_status?: string
+  verification_timestamp?: string
+  last_audit?: {
+    audited_files?: string[]
+    security_score?: number
+    audit_timestamp?: string
+  }
+  
+  // Audit execution
+  audited_files?: string[]
+  audit_timestamp?: string
+  security_score?: number
+  lines_analyzed?: number
+  duration_ms?: number
+  findings?: Array<{
+    type: string
+    message: string
+    line?: number
+    suggestion?: string
+  }>
+  gemini_analysis?: string
+  
+  // Legacy properties
   summary?: {
     files_analyzed: number
     security_score: number
@@ -62,6 +96,22 @@ export interface TEEAuditResult {
     execution_steps: number
     timestamp: string
   }
+  
+  // For execution logs
+  execution_trace?: Array<{
+    step: number
+    action: string
+    timestamp: string
+    data: Record<string, unknown>
+    hash: string
+  }>
+  verification_info?: {
+    each_step_is_hashed: boolean
+    hash_chain_verified: boolean
+    cryptographic_proof: string
+  }
+  transparency_notes?: string[]
+
   audit_results?: unknown
   execution_summary?: {
     total_steps: number
@@ -80,6 +130,24 @@ export interface TEEAuditHealth {
   }
   last_health_check: string
   auditor_source: string
+}
+
+export interface TEEOperation {
+  id: string;
+  timestamp: string;
+  method: string;
+  endpoint: string;
+  execution_time_ms: number;
+  status_code: number;
+  user_id: string;
+  operation_hash: string;
+}
+
+export interface TEEOperationsLog {
+  operations: TEEOperation[];
+  total_operations: number;
+  last_updated: string;
+  tee_verification: string;
 }
 
 export interface TEEExecutionLog {

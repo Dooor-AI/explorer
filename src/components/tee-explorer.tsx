@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { 
   Shield, 
   Zap, 
@@ -12,7 +12,20 @@ import {
   Code,
   BookOpen,
   Info,
-  Lock
+  Lock,
+  FileText,
+  Calendar,
+  AlertTriangle,
+  Package,
+  Globe,
+  Wrench,
+  Download,
+  BrainCircuit,
+  ListChecks,
+  History,
+  ShieldCheck,
+  ChevronDown,
+  BarChart
 } from 'lucide-react'
 import { 
   FaShieldAlt, 
@@ -31,8 +44,7 @@ import {
   MdCheckCircle, 
   MdWarning,
   MdSecurity,
-  MdBugReport,
-  MdSearch
+  MdBugReport
 } from 'react-icons/md'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
@@ -48,14 +60,16 @@ import { TEEAttestationValidator } from '@/lib/tee-api'
 import { 
   TEEValidationReport, 
   TEEAuditResult, 
-  TEEAuditHealth 
+  TEEAuditHealth,
+  TEEOperationsLog
 } from '@/lib/types'
+import TeeOperations from './tee-operations'
 
-type ActiveSection = 'live-tee' | 'manual-jwt' | 'auditor' | 'learn' | 'about'
+type ActiveSection = 'operations' | 'live-tee' | 'manual-jwt' | 'auditor' | 'learn' | 'about'
 type LearnTab = 'overview' | 'technical' | 'security' | 'implementation' | 'troubleshooting'
 
 export default function TEEExplorer() {
-  const [activeSection, setActiveSection] = useState<ActiveSection>('live-tee')
+  const [activeSection, setActiveSection] = useState<ActiveSection>('operations')
   const [activeLearnTab, setActiveLearnTab] = useState<LearnTab>('overview')
   const [teeUrl, setTeeUrl] = useState('https://api-tee.dooor.ai')
   const [jwtToken, setJwtToken] = useState('')
@@ -64,6 +78,26 @@ export default function TEEExplorer() {
   const [auditorResult, setAuditorResult] = useState<TEEAuditResult | null>(null)
   const [auditorHealth, setAuditorHealth] = useState<TEEAuditHealth | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
+  const [isTransparencyOpen, setIsTransparencyOpen] = useState(false)
+  const auditorResultsRef = useRef<HTMLDivElement>(null)
+  const validationResultsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if ((auditorResult || auditorHealth || error) && activeSection === 'auditor') {
+      setTimeout(() => {
+        auditorResultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+    }
+  }, [auditorResult, auditorHealth, error, activeSection])
+
+  useEffect(() => {
+    if ((validationResult || error) && activeSection === 'live-tee') {
+      setTimeout(() => {
+        validationResultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+    }
+  }, [validationResult, error, activeSection])
 
   const validator = new TEEAttestationValidator({
     projectId: 'dooor-core',
@@ -185,25 +219,31 @@ export default function TEEExplorer() {
     }
   }
 
-  const handleAuditorAction = async (action: 'health' | 'run' | 'results' | 'logs' | 'verification') => {
-    setIsLoading(true)
+  const handleAuditorAction = async (action: 'hash' | 'health' | 'verify' | 'run' | 'report' | 'logs') => {
+    setLoadingAction(action)
     setError(null)
     setAuditorResult(null)
     setAuditorHealth(null)
 
     try {
       const endpoint = {
+        hash: '/v1/tee/auditor/hash',
         health: '/v1/tee/auditor/health',
+        verify: '/v1/tee/auditor/verify',
         run: '/v1/tee/auditor/run',
-        results: '/v1/tee/auditor/results',
-        logs: '/v1/tee/auditor/execution-log',
-        verification: '/v1/tee/auditor/verification'
+        report: '/v1/tee/auditor/results',
+        logs: '/v1/tee/auditor/execution-log'
       }[action]
 
       const method = action === 'run' ? 'POST' : 'GET'
+      const body = action === 'run' ? JSON.stringify({
+        files: ['src/agents-nl/agents-nl.module.ts']
+      }) : undefined
+
       const response = await fetch(`${teeUrl}${endpoint}`, {
         method,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body
       })
 
       if (!response.ok) {
@@ -215,17 +255,19 @@ export default function TEEExplorer() {
       if (action === 'health') {
         setAuditorHealth(data)
       } else {
-        setAuditorResult(data)
+        setAuditorResult({ ...data, action })
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
-      setIsLoading(false)
+      setLoadingAction(null)
     }
   }
 
   const renderContent = () => {
     switch (activeSection) {
+      case 'operations':
+        return <TeeOperations teeUrl={teeUrl} />
       case 'live-tee':
         return (
           <div className="space-y-6">
@@ -339,6 +381,7 @@ export default function TEEExplorer() {
             </div>
 
             {/* Results Section */}
+            <div ref={validationResultsRef}>
             {(validationResult || error) && (
               <Card className="floating-card bg-secondary/20 border-secondary/40">
                 <CardHeader className="border-b border-secondary/30">
@@ -525,6 +568,7 @@ export default function TEEExplorer() {
                 </CardContent>
               </Card>
             )}
+            </div>
           </div>
         )
 
@@ -637,7 +681,7 @@ export default function TEEExplorer() {
             {/* Header Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Main Auditor Card */}
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2 space-y-6">
                 <Card className="floating-card bg-secondary/30 border-secondary/50">
                   <CardHeader className="pb-4">
                     <div className="flex items-center gap-3">
@@ -671,60 +715,118 @@ export default function TEEExplorer() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       <Button 
                         onClick={() => handleAuditorAction('health')}
-                        disabled={isLoading}
+                        disabled={!!loadingAction}
                         variant="default"
                         className="flex items-center gap-2 h-12 bg-secondary/70 text-secondary-foreground hover:bg-secondary/90 border border-secondary/50"
                       >
-                        <Activity className="w-4 h-4" />
+                        {loadingAction === 'health' ? <Activity className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
                         <span className="hidden sm:inline">Health Check</span>
                         <span className="sm:hidden">Health</span>
                       </Button>
                       
                       <Button 
                         onClick={() => handleAuditorAction('run')}
-                        disabled={isLoading}
+                        disabled={!!loadingAction}
                         variant="default"
-                        className="flex items-center gap-2 h-12 bg-primary/80 text-primary-foreground hover:bg-primary/90 border border-primary/50"
+                        className="flex items-center gap-2 h-12 bg-secondary/70 text-secondary-foreground hover:bg-secondary/90 border border-secondary/50"
                       >
-                        {isLoading ? <Activity className="w-4 h-4 animate-spin" /> : <Code className="w-4 h-4" />}
+                        {loadingAction === 'run' ? <Activity className="w-4 h-4 animate-spin" /> : <Code className="w-4 h-4" />}
                         <span className="hidden sm:inline">Run Audit</span>
                         <span className="sm:hidden">Run</span>
                       </Button>
                       
                       <Button 
-                        onClick={() => handleAuditorAction('results')}
-                        disabled={isLoading}
+                        onClick={() => handleAuditorAction('report')}
+                        disabled={!!loadingAction}
                         variant="default"
                         className="flex items-center gap-2 h-12 bg-secondary/70 text-secondary-foreground hover:bg-secondary/90 border border-secondary/50"
                       >
-                        <FileCheck className="w-4 h-4" />
-                        <span className="hidden sm:inline">Get Results</span>
-                        <span className="sm:hidden">Results</span>
+                        {loadingAction === 'report' ? <Activity className="w-4 h-4 animate-spin" /> : <FileCheck className="w-4 h-4" />}
+                        <span className="hidden sm:inline">Latest Report</span>
+                        <span className="sm:hidden">Report</span>
                       </Button>
                       
                       <Button 
                         onClick={() => handleAuditorAction('logs')}
-                        disabled={isLoading}
+                        disabled={!!loadingAction}
                         variant="default"
                         className="flex items-center gap-2 h-12 bg-secondary/70 text-secondary-foreground hover:bg-secondary/90 border border-secondary/50"
                       >
-                        <Search className="w-4 h-4" />
-                        <span className="hidden sm:inline">Execution Log</span>
-                        <span className="sm:hidden">Log</span>
-                      </Button>
-                      
-                      <Button 
-                        onClick={() => handleAuditorAction('verification')}
-                        disabled={isLoading}
-                        variant="default"
-                        className="flex items-center gap-2 h-12 bg-secondary/70 text-secondary-foreground hover:bg-secondary/90 border border-secondary/50 sm:col-span-2 lg:col-span-1"
-                      >
-                        <Shield className="w-4 h-4" />
-                        <span className="hidden sm:inline">Verification Info</span>
-                        <span className="sm:hidden">Verify</span>
+                        {loadingAction === 'logs' ? <Activity className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                        <span className="hidden sm:inline">Audit Logs</span>
+                        <span className="sm:hidden">Logs</span>
                       </Button>
                     </div>
                   </CardContent>
+                </Card>
+
+                {/* Transparency Information */}
+                <Card className="floating-card bg-muted/10 border-muted/30">
+                  <CardHeader 
+                    className="cursor-pointer"
+                    onClick={() => setIsTransparencyOpen(!isTransparencyOpen)}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-5 h-5 text-muted-foreground" />
+                        <CardTitle className="text-lg text-card-foreground">
+                          Transparency & Open Source
+                        </CardTitle>
+                      </div>
+                      <ChevronDown
+                        className={`w-5 h-5 text-muted-foreground transition-transform transform ${
+                          isTransparencyOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </div>
+                    <CardDescription className="text-card-foreground/80 pt-2">
+                      Complete transparency in code auditing with verifiable execution
+                    </CardDescription>
+                  </CardHeader>
+                  {isTransparencyOpen && (
+                    <CardContent>
+                      <div className="text-sm text-card-foreground/90 space-y-4">
+                        <div>
+                          <h4 className="font-semibold text-card-foreground mb-2 flex items-center gap-2">
+                            <Search className="w-4 h-4" /> How This Auditor Works:
+                          </h4>
+                          <div className="space-y-2 text-xs pl-6">
+                            <div><strong>1. Auditor Code:</strong> Complete source code available on GitHub</div>
+                            <div><strong>2. Hash Verification:</strong> SHA256 hash verification against public repository</div>
+                            <div><strong>3. Gemini AI Analysis:</strong> Google&apos;s Gemini AI analyzes code for vulnerabilities</div>
+                            <div><strong>4. Transparent Results:</strong> All audit results publicly available</div>
+                            <div><strong>5. Verifiable Process:</strong> Every audit logged with timestamp and hash</div>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-semibold text-card-foreground mb-2 flex items-center gap-2">
+                            <Shield className="w-4 h-4" /> Security Guarantees:
+                          </h4>
+                          <div className="space-y-1 text-xs pl-6">
+                            <div>• Auditor runs inside Google Cloud TEE (Trusted Execution Environment)</div>
+                            <div>• Network access restricted to whitelisted domains only</div>
+                            <div>• All outbound HTTP calls logged and publicly visible</div>
+                            <div>• Auditor code integrity cryptographically verifiable</div>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-semibold text-card-foreground mb-2 flex items-center gap-2">
+                            <Wrench className="w-4 h-4" /> Analysis Categories:
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pl-6">
+                            <div>• Authentication & Authorization</div>
+                            <div>• Input validation issues</div>
+                            <div>• Data exposure risks</div>
+                            <div>• Dependency security</div>
+                            <div>• Business logic flaws</div>
+                            <div>• OWASP compliance</div>
+                          </div>
+                        </div>
+                    </div>
+                  </CardContent>
+                  )}
                 </Card>
               </div>
 
@@ -781,28 +883,11 @@ export default function TEEExplorer() {
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* Transparency Info Card */}
-                <Card className="floating-card bg-muted/10 border-muted/30">
-                  <CardContent className="p-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Code className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium text-card-foreground">Transparency</span>
-                      </div>
-                      <div className="space-y-1 text-xs text-muted-foreground">
-                        <div>• Open-source auditor code</div>
-                        <div>• Cryptographic execution proof</div>
-                        <div>• Public audit trail</div>
-                        <div>• Hardware attestation</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             </div>
 
             {/* Results Section */}
+            <div ref={auditorResultsRef}>
             {(auditorResult || auditorHealth || error) && (
               <Card className="floating-card bg-secondary/20 border-secondary/40">
                 <CardHeader className="border-b border-secondary/30">
@@ -860,36 +945,320 @@ export default function TEEExplorer() {
                   
                   {auditorResult && (
                     <div className="space-y-6">
-                      {/* Audit Results Header */}
+                        {auditorResult.action === 'hash' && (
+                          <div className="space-y-4">
                       <div className="p-4 bg-tee-success/10 border border-tee-success/20 rounded-lg">
                         <div className="flex items-center gap-3">
-<MdSearch className="w-8 h-8 text-tee-success" />
+                                <MdCheckCircle className="w-8 h-8 text-tee-success" />
+                                <div>
+                                  <p className="font-medium text-lg text-tee-success">✅ Auditor Hash Verified</p>
+                                  <p className="text-sm text-muted-foreground">Auditor integrity cryptographically confirmed</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="p-4 bg-muted/10 border border-muted/30 rounded-lg">
+                              <h4 className="font-medium text-card-foreground mb-3">📦 Hash Information</h4>
+                              <div className="text-sm space-y-2 text-card-foreground/90">
+                                <div><strong>📦 Auditor Hash:</strong> {auditorResult.auditor_hash}</div>
+                                <div><strong>📅 Last Updated:</strong> {auditorResult.last_updated}</div>
+                                <div><strong>🔢 Version:</strong> {auditorResult.version}</div>
+                                <div className="flex items-center gap-2">
+                                  <Globe className="w-4 h-4 text-muted-foreground" />
+                                  <strong>🌐 Source Repository:</strong> {auditorResult.source_repo}
+                                </div>
+                                {auditorResult.included_files && (
+                                  <div>
+                                    <strong>📁 Included Files:</strong>
+                                    <ul className="list-disc pl-4 mt-1 text-xs">
+                                      {auditorResult.included_files.map((file: string, i: number) => (
+                                        <li key={i}>{file}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {auditorResult.action === 'verify' && (
+                          <div className="space-y-4">
+                            <div className="p-4 bg-tee-success/10 border border-tee-success/20 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <MdCheckCircle className="w-8 h-8 text-tee-success" />
                           <div>
                             <p className="font-medium text-lg text-tee-success">
-                              Code Audit Complete
+                                    {auditorResult.auditor_verified ? '✅' : '❌'} Complete Auditor Verification
                             </p>
-                            <p className="text-sm text-muted-foreground">
-                              Transparent audit executed with cryptographic proof
-                            </p>
+                                  <p className="text-sm text-muted-foreground">Full system verification complete</p>
                           </div>
                         </div>
                       </div>
+                            <div className="p-4 bg-muted/10 border border-muted/30 rounded-lg">
+                              <div className="text-sm space-y-2 text-card-foreground/90">
+                                <div className="flex items-center gap-2">
+                                  <Shield className="w-4 h-4 text-muted-foreground" />
+                                  <strong>🛡️ Auditor Verified:</strong> {auditorResult.auditor_verified ? 'YES' : 'NO'}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Activity className="w-4 h-4 text-muted-foreground" />
+                                  <strong>💚 Health Status:</strong> {auditorResult.health_status === 'healthy' ? '✅' : '❌'} {auditorResult.health_status?.toUpperCase()}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Lock className="w-4 h-4 text-muted-foreground" />
+                                  <strong>🔐 Auditor Hash:</strong> {auditorResult.auditor_hash}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                                  <strong>📅 Verification Time:</strong> {auditorResult.verification_timestamp}
+                                </div>
+                                {auditorResult.last_audit && (
+                                  <div>
+                                    <strong>📊 Latest Audit Available:</strong>
+                                    <div className="pl-4 text-xs mt-1">
+                                      <div>• Files: {auditorResult.last_audit.audited_files?.join(', ')}</div>
+                                      <div>• Score: {auditorResult.last_audit.security_score}/100</div>
+                                      <div>• Date: {auditorResult.last_audit.audit_timestamp}</div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
-                      {/* Audit Results Details */}
+                        {auditorResult.action === 'run' && (
+                          <div className="space-y-4">
+                            <div className="p-4 bg-tee-success/10 border border-tee-success/20 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <MdCheckCircle className="w-8 h-8 text-tee-success" />
+                                <div>
+                                  <p className="font-medium text-lg text-tee-success">✅ Security Audit Completed</p>
+                                  <p className="text-sm text-muted-foreground">{auditorResult.message || 'Transparent audit executed with cryptographic proof'}</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="p-4 bg-muted/10 border border-muted/30 rounded-lg">
+                              <h4 className="font-medium text-card-foreground mb-3">Audit results</h4>
+                              <div className="text-sm space-y-2 text-card-foreground/90">
+                                <div className="flex items-center gap-2">
+                                  <FileText className="w-4 h-4 text-muted-foreground" />
+                                  <strong>Files Analyzed:</strong>{auditorResult.summary?.files_analyzed || 'N/A'}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                                  <strong>Audit Time:</strong> {auditorResult.transparency_proof?.timestamp || auditorResult.audit_timestamp || 'N/A'}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+                                  <strong>Critical Findings:</strong> {auditorResult.summary?.critical_findings ?? 'N/A'}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Lock className="w-4 h-4 text-muted-foreground" />
+                                  <strong>Auditor Hash:</strong> {auditorResult.verification?.auditor_hash || 'N/A'}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Package className="w-4 h-4 text-muted-foreground" />
+                                  <strong>Session ID:</strong> {auditorResult.session_id || 'N/A'}
+                                </div>
+                              </div>
+                              
+                              {/* Verification Section */}
+                              {auditorResult.verification && (
+                                <div className="mt-4">
+                                  <h5 className="font-medium text-card-foreground mb-2">Verification:</h5>
+                                  <div className="text-sm space-y-1 text-card-foreground/90">
+                                    <div><strong>Execution Chain Hash:</strong> <span className="font-mono text-xs">{auditorResult.verification.execution_chain_hash}</span></div>
+                                    <div><strong>TEE Signature:</strong> <span className="font-mono text-xs">{auditorResult.verification.tee_signature}</span></div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Transparency Proof Section */}
+                              {auditorResult.transparency_proof && (
+                                <div className="mt-4">
+                                  <h5 className="font-medium text-card-foreground mb-2">Transparency proof:</h5>
+                                  <div className="text-sm space-y-1 text-card-foreground/90">
+                                    <div><strong>Public Auditor URL:</strong> <a href={auditorResult.transparency_proof.public_auditor_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">{auditorResult.transparency_proof.public_auditor_url}</a></div>
+                                    <div><strong>Execution Steps:</strong> {auditorResult.transparency_proof.execution_steps}</div>
+                                    <div><strong>Timestamp:</strong> {auditorResult.transparency_proof.timestamp}</div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {auditorResult.findings && auditorResult.findings.length > 0 && (
+                                <div className="mt-4">
+                                  <h5 className="font-medium text-card-foreground mb-2">Findings ({auditorResult.findings.length}):</h5>
+                                  <div className="space-y-2">
+                                    {auditorResult.findings.map((finding: { type: string; message: string; line?: number; suggestion?: string }, i: number) => (
+                                      <div key={i} className={`p-3 rounded border-l-4 ${
+                                        finding.type === 'critical' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' :
+                                        finding.type === 'error' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' :
+                                        finding.type === 'warning' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' :
+                                        'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                      }`}>
+                                        <div className="text-sm">
+                                          <strong>{finding.type?.toUpperCase()}:</strong> {finding.message}
+                                          {finding.line && <div className="text-xs mt-1">Line: {finding.line}</div>}
+                                          {finding.suggestion && <div className="text-xs mt-1">💡 {finding.suggestion}</div>}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {auditorResult.gemini_analysis && (
+                                <div className="mt-4">
+                                  <h5 className="font-medium text-card-foreground mb-2">Ai analysis:</h5>
+                                  <div className="text-sm text-card-foreground/90 whitespace-pre-wrap">{auditorResult.gemini_analysis}</div>
+                                </div>
+                              )}
+
+                              {/* Raw JSON Response */}
+                              <div className="mt-4">
+                                <h5 className="font-medium text-card-foreground mb-2">Raw response:</h5>
+                                <pre className="text-xs text-muted-foreground overflow-x-auto p-3 bg-background/50 rounded border whitespace-pre-wrap">
+                                  {String(JSON.stringify(auditorResult, null, 2))}
+                                </pre>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {auditorResult.action === 'report' && (
+                          <div className="space-y-4">
+                            <div className="p-4 bg-tee-success/10 border border-tee-success/20 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <FileCheck className="w-8 h-8 text-tee-success" />
+                                <div>
+                                  <p className="font-medium text-lg text-tee-success">Latest audit report</p>
+                                  <p className="text-sm text-muted-foreground">Most recent security audit results</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="p-4 bg-muted/10 border border-muted/30 rounded-lg">
+                              <pre className="text-xs text-muted-foreground overflow-x-auto p-3 bg-background/50 rounded border whitespace-pre-wrap">
+                                {String(JSON.stringify(auditorResult, null, 2))}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+
+                        {auditorResult.action === 'logs' && (
+                          <div className="space-y-6">
+                            <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <History className="w-8 h-8 text-primary" />
+                                <div>
+                                  <p className="font-medium text-lg text-primary">Execution Log</p>
+                                  <p className="text-sm text-muted-foreground">Session ID: {auditorResult.session_id}</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {auditorResult.execution_trace ? (
+                              <div className="space-y-6">
+                                {/* Verification Info */}
+                                {auditorResult.verification_info && (
+                                  <Card className="bg-muted/20">
+                                    <CardHeader>
+                                      <CardTitle className="flex items-center gap-2 text-md">
+                                        <ShieldCheck className="w-5 h-5" />
+                                        Verification Details
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="text-sm space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        {auditorResult.verification_info.each_step_is_hashed ? <CheckCircle className="w-4 h-4 text-green-500" /> : <MdError className="w-4 h-4 text-red-500" />}
+                                        Each step is hashed
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {auditorResult.verification_info.hash_chain_verified ? <CheckCircle className="w-4 h-4 text-green-500" /> : <MdError className="w-4 h-4 text-red-500" />}
+                                        Hash chain verified
+                                      </div>
+                                      <div>
+                                        <strong>Cryptographic Proof:</strong>
+                                        <p className="text-xs font-mono break-all bg-background/50 p-2 rounded mt-1">{auditorResult.verification_info.cryptographic_proof}</p>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                )}
+
+                                {/* Execution Trace */}
+                                <div>
+                                  <h4 className="text-lg font-semibold mb-3 flex items-center gap-2"><ListChecks /> Execution Trace</h4>
+                                  <div className="space-y-4">
+                                    {auditorResult.execution_trace.map((item, index) => {
+                                      const Icon = {
+                                        download_auditor: Download,
+                                        read_file: FileText,
+                                        gemini_analysis: BrainCircuit,
+                                      }[item.action] || History
+
+                                      return (
+                                        <Card key={index} className="bg-secondary/30">
+                                          <CardHeader className="pb-3">
+                                            <CardTitle className="text-md flex items-center justify-between">
+                                              <div className="flex items-center gap-2">
+                                                <Icon className="w-5 h-5" />
+                                                Step {item.step}: <span className="font-mono text-sm">{item.action}</span>
+                                              </div>
+                                              <span className="text-xs font-normal text-muted-foreground">{new Date(item.timestamp).toLocaleString()}</span>
+                                            </CardTitle>
+                                          </CardHeader>
+                                          <CardContent>
+                                            <pre className="text-xs text-muted-foreground overflow-x-auto p-3 bg-background/50 rounded border">
+                                              {JSON.stringify(item.data, null, 2)}
+                                            </pre>
+                                            <div className="mt-2">
+                                              <strong className="text-xs">Step Hash:</strong>
+                                              <p className="text-xs font-mono break-all">{item.hash}</p>
+                                            </div>
+                                          </CardContent>
+                                        </Card>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Transparency Notes */}
+                                {auditorResult.transparency_notes && (
+                                  <div>
+                                    <h4 className="text-lg font-semibold mb-3 flex items-center gap-2"><Info /> Transparency Notes</h4>
+                                    <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                                      {auditorResult.transparency_notes.map((note, index) => (
+                                        <li key={index}>{note}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-card-foreground/70 p-4 bg-muted/20 rounded-lg">
+                                📋 No audit logs available yet
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {!auditorResult.action && (
                       <div className="p-4 bg-muted/10 border border-muted/30 rounded-lg">
                         <h4 className="font-medium text-card-foreground mb-3 flex items-center gap-2">
                           <Code className="w-4 h-4" />
-                          Audit Results
+                              Raw Response
                         </h4>
                         <pre className="text-xs text-muted-foreground overflow-x-auto p-3 bg-background/50 rounded border">
                           {String(JSON.stringify(auditorResult, null, 2))}
                         </pre>
                       </div>
+                        )}
                     </div>
                   )}
                 </CardContent>
               </Card>
             )}
+            </div>
           </div>
         )
 
@@ -1122,7 +1491,7 @@ export default function TEEExplorer() {
                         Ready to Experience TEE Security?
                       </h4>
                       <p className="text-sm text-card-foreground/90">
-                                                Use the validation tools above to test dooor&apos;s TEE implementation and see firsthand 
+                                                Use the validation tools above to test Dooor&apos;s TEE implementation and see firsthand 
                          how cryptographic attestation provides mathematical proof of security. This live TEE 
                          environment demonstrates real-world secure computing capabilities.
                       </p>
@@ -1484,9 +1853,9 @@ Verification: O(log n) vs O(n) for full state`}
                         Security Guarantee Promise
                       </h4>
                       <p className="text-sm text-card-foreground/90">
-                                                 dooor&apos;s TEE environment provides mathematical guarantees of data protection through hardware-enforced 
+                      Dooor&apos;s TEE environment provides mathematical guarantees of data protection through hardware-enforced 
                          isolation, cryptographic attestation, and zero-knowledge architectures. The security model ensures 
-                         that even dooor&apos;s own operators cannot access sensitive data during processing.
+                         that even Dooor&apos;s own operators cannot access sensitive data during processing.
                       </p>
                     </div>
                   </div>
@@ -1682,7 +2051,7 @@ sudo iptables -L -n -v`}
                 <div className="flex items-center gap-3">
                   <FaServer className="w-6 h-6 text-primary" />
                   <div>
-                    <CardTitle className="text-xl text-card-foreground">dooor TEE Platform Status</CardTitle>
+                    <CardTitle className="text-xl text-card-foreground">Dooor TEE Platform Status</CardTitle>
                     <CardDescription className="text-card-foreground/80">
                       Running on Google Cloud Confidential Spaces with AMD SEV-SNP technology
                     </CardDescription>
@@ -1847,22 +2216,28 @@ sudo iptables -L -n -v`}
         <div className="flex-1 overflow-y-auto">
           <SidebarSection title="Main">
             <SidebarItem
+              icon={BarChart}
+              label="Operations"
+              isActive={activeSection === 'operations'}
+              onClick={() => setActiveSection('operations')}
+            />
+            <SidebarItem
               icon={Zap}
               label="Live TEE"
               isActive={activeSection === 'live-tee'}
               onClick={() => setActiveSection('live-tee')}
             />
             <SidebarItem
-              icon={Key}
-              label="Manual JWT"
-              isActive={activeSection === 'manual-jwt'}
-              onClick={() => setActiveSection('manual-jwt')}
-            />
-            <SidebarItem
               icon={Code}
               label="Code Auditor"
               isActive={activeSection === 'auditor'}
               onClick={() => setActiveSection('auditor')}
+            />
+            <SidebarItem
+              icon={Key}
+              label="Manual JWT"
+              isActive={activeSection === 'manual-jwt'}
+              onClick={() => setActiveSection('manual-jwt')}
             />
           </SidebarSection>
           

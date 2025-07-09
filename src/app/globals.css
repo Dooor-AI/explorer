@@ -56,7 +56,7 @@
 }
 
 .dark {
-  --background: oklch(0.0300 0 0); /* Pure black background for main content */
+  --background: oklch(0.2000 0 0); /* Pure black background for main content */
   --foreground: oklch(0.9800 0 0); /* Almost white text */
   --card: oklch(0.0300 0 0); /* Black cards */
   --card-foreground: oklch(0.9800 0 0); /* White text on cards */
@@ -362,17 +362,17 @@ a, button, [role="button"], [tabindex="0"] {
   cursor: pointer;
 }
 
-/* Card improvements - floating effect like the image */
+/* Card improvements - apenas borda cinza pequena */
 .floating-card {
   background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
+  /* Shadow removida - apenas borda cinza */
   transition: all 0.3s ease-in-out;
 }
 
 .floating-card:hover {
-  box-shadow: var(--shadow-xl);
+  /* Shadow removida no hover também */
 }
 
 /* Main content area styling */
