@@ -14,9 +14,11 @@ export interface TEEValidationReport {
     last_updated?: string
     firewall_active?: boolean
   }
-  claims?: unknown
+  claims?: Record<string, unknown> | null
   errors?: string[]
   warnings?: string[]
+  securityErrors?: string[]
+  securityWarnings?: string[]
   securityConfig?: {
     allowed_domains: string[]
   }

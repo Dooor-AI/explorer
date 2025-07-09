@@ -87,7 +87,7 @@ export class TEEAttestationValidator {
         instance: this.instanceName,
         zone: this.zone
       },
-      claims: decoded.payload,
+      claims: decoded.payload as Record<string, unknown>,
       errors: isValid ? [] : ['JWT validation failed']
     }
   }
@@ -111,25 +111,64 @@ export class TEEAttestationValidator {
     return decoded.header !== null && decoded.payload !== null
   }
 
-  async validateSecurityConfiguration(): Promise<TEEValidationReport> {
+  async validateSecurityConfiguration(url?: string): Promise<TEEValidationReport> {
     try {
-      // Mock security validation
+      if (!url) {
+        // Mock security validation when no URL provided
+        return {
+          valid: true,
+          summary: {
+            trusted: true,
+            hardware: 'Google Cloud TEE',
+            project: this.projectId,
+            instance: this.instanceName,
+            zone: this.zone,
+            firewall_active: true,
+            whitelisted_domains: 5,
+            total_http_calls: 127,
+            last_updated: new Date().toISOString()
+          },
+          securityConfig: {
+            allowed_domains: ['api.google.com', 'cloud.google.com']
+          }
+        }
+      }
+
+      // Real security validation against TEE server
+      const response = await fetch(`${url}/v1/tee/security-config`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+
+      // Parse the API response structure from dooor's TEE platform
+      const isSecurityValid = data.tee_security_enabled && data.firewall_status === 'active-logged'
+      const whitelistedDomainsCount = data.allowed_domains ? data.allowed_domains.length : 0
+      const totalHttpCalls = data.total_outbound_calls || (data.http_call_logs ? data.http_call_logs.length : 0)
+
       return {
-        valid: true,
+        valid: isSecurityValid,
         summary: {
-          trusted: true,
+          trusted: isSecurityValid,
           hardware: 'Google Cloud TEE',
           project: this.projectId,
           instance: this.instanceName,
           zone: this.zone,
-          firewall_active: true,
-          whitelisted_domains: 5,
-          total_http_calls: 127,
-          last_updated: new Date().toISOString()
+          firewall_active: data.firewall_status === 'active-logged',
+          whitelisted_domains: whitelistedDomainsCount,
+          total_http_calls: totalHttpCalls,
+          last_updated: data.last_updated || new Date().toISOString()
         },
         securityConfig: {
-          allowed_domains: ['api.google.com', 'cloud.google.com']
-        }
+          allowed_domains: data.allowed_domains || []
+        },
+        errors: data.errors || [],
+        warnings: data.warnings || []
       }
     } catch (error) {
       return {
@@ -140,7 +179,9 @@ export class TEEAttestationValidator {
           project: this.projectId,
           instance: this.instanceName,
           zone: this.zone,
-          firewall_active: false
+          firewall_active: false,
+          whitelisted_domains: 0,
+          total_http_calls: 0
         },
         errors: [`Security validation failed: ${error}`]
       }

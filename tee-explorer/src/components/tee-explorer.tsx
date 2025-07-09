@@ -26,6 +26,14 @@ import {
   FaTools,
   FaBug
 } from 'react-icons/fa'
+import { 
+  MdError, 
+  MdCheckCircle, 
+  MdWarning,
+  MdSecurity,
+  MdBugReport,
+  MdSearch
+} from 'react-icons/md'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -49,7 +57,7 @@ type LearnTab = 'overview' | 'technical' | 'security' | 'implementation' | 'trou
 export default function TEEExplorer() {
   const [activeSection, setActiveSection] = useState<ActiveSection>('live-tee')
   const [activeLearnTab, setActiveLearnTab] = useState<LearnTab>('overview')
-  const [teeUrl, setTeeUrl] = useState('https://api-tee.dooor.ai/v1')
+  const [teeUrl, setTeeUrl] = useState('https://api-tee.dooor.ai')
   const [jwtToken, setJwtToken] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [validationResult, setValidationResult] = useState<TEEValidationReport | null>(null)
@@ -103,10 +111,26 @@ export default function TEEExplorer() {
           }
           break
         case 'detailed':
-          result = await validator.getValidationReport(attestationJWT)
+          const jwtResult = await validator.getValidationReport(attestationJWT)
+          const securityResult = await validator.validateSecurityConfiguration(teeUrl)
+          
+          // Combine JWT validation with security information
+          result = {
+            ...jwtResult,
+            summary: {
+              ...jwtResult.summary,
+              firewall_active: securityResult.summary.firewall_active,
+              whitelisted_domains: securityResult.summary.whitelisted_domains,
+              total_http_calls: securityResult.summary.total_http_calls,
+              last_updated: securityResult.summary.last_updated
+            },
+            securityConfig: securityResult.securityConfig,
+            securityErrors: securityResult.errors,
+            securityWarnings: securityResult.warnings
+          }
           break
         case 'security':
-          result = await validator.validateSecurityConfiguration()
+          result = await validator.validateSecurityConfiguration(teeUrl)
           break
         case 'complete':
           result = await validator.validateCompleteTEE(teeUrl)
@@ -144,7 +168,7 @@ export default function TEEExplorer() {
               instance: 'Manual',
               zone: 'Manual'
             },
-            claims: decoded.payload,
+            claims: decoded.payload as Record<string, unknown>,
             errors: []
           })
         } else {
@@ -218,7 +242,7 @@ export default function TEEExplorer() {
                       <div>
                         <CardTitle className="text-xl text-card-foreground">Live TEE Validation</CardTitle>
                         <CardDescription className="text-muted-foreground">
-                          Validate dooor&apos;s TEE platform attestation tokens and test security features in real-time
+                          Validate Dooor TEE platform attestation tokens and test security features in real-time
                         </CardDescription>
                       </div>
                     </div>
@@ -229,13 +253,13 @@ export default function TEEExplorer() {
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
                           <Shield className="w-4 h-4 text-muted-foreground" />
-                          <Label htmlFor="teeUrl" className="text-card-foreground font-medium">dooor TEE Platform URL</Label>
+                          <Label htmlFor="teeUrl" className="text-card-foreground font-medium">Dooor TEE Platform URL</Label>
                         </div>
                                                   <Input
                             id="teeUrl"
                             value={teeUrl}
                             onChange={(e) => setTeeUrl(e.target.value)}
-                            placeholder="https://api-tee.dooor.ai/v1 (dooor TEE platform)"
+                            placeholder="https://api-tee.dooor.ai (Dooor TEE platform)"
                             className="bg-input/50 border-border/50 text-foreground h-11 font-mono text-sm"
                           />
                       </div>
@@ -243,16 +267,6 @@ export default function TEEExplorer() {
 
                     {/* Action Buttons Grid */}
                     <div className="grid grid-cols-2 gap-3">
-                      <Button 
-                        onClick={() => handleLiveTEEValidation('quick')}
-                        disabled={isLoading}
-                        variant="default"
-                        className="flex items-center gap-2 h-12 bg-secondary/70 text-secondary-foreground hover:bg-secondary/90 border border-secondary/50"
-                      >
-                        {isLoading ? <Activity className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                        <span className="hidden sm:inline">Quick Validation</span>
-                        <span className="sm:hidden">Quick</span>
-                      </Button>
                       
                       <Button 
                         onClick={() => handleLiveTEEValidation('detailed')}
@@ -265,27 +279,6 @@ export default function TEEExplorer() {
                         <span className="sm:hidden">Detailed</span>
                       </Button>
                       
-                      <Button 
-                        onClick={() => handleLiveTEEValidation('security')}
-                        disabled={isLoading}
-                        variant="default"
-                        className="flex items-center gap-2 h-12 bg-secondary/70 text-secondary-foreground hover:bg-secondary/90 border border-secondary/50"
-                      >
-                        <Shield className="w-4 h-4" />
-                        <span className="hidden sm:inline">Security Check</span>
-                        <span className="sm:hidden">Security</span>
-                      </Button>
-                      
-                      <Button 
-                        onClick={() => handleLiveTEEValidation('complete')}
-                        disabled={isLoading}
-                        variant="default"
-                        className="flex items-center gap-2 h-12 bg-secondary/70 text-secondary-foreground hover:bg-secondary/90 border border-secondary/50"
-                      >
-                        <Lock className="w-4 h-4" />
-                        <span className="hidden sm:inline">Complete Validation</span>
-                        <span className="sm:hidden">Complete</span>
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -360,7 +353,7 @@ export default function TEEExplorer() {
                   {error && (
                     <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">❌</span>
+                        <MdError className="w-5 h-5 text-destructive" />
                         <p className="text-destructive font-medium">Error: {error}</p>
                       </div>
                     </div>
@@ -374,15 +367,15 @@ export default function TEEExplorer() {
                         : 'bg-destructive/10 border-destructive/20'
                       }`}>
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">
-                            {validationResult.valid ? '✅' : '❌'}
-                          </span>
+                          <div className="text-2xl">
+                            {validationResult.valid ? <MdCheckCircle className="w-8 h-8 text-tee-success" /> : <MdError className="w-8 h-8 text-destructive" />}
+                          </div>
                           <div>
                             <p className={`font-medium text-lg ${validationResult.valid ? 'text-tee-success' : 'text-destructive'}`}>
                               {validationResult.valid ? 'TEE Validation Successful' : 'TEE Validation Failed'}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              {validationResult.valid ? 'dooor&apos;s TEE platform is authenticated and secure' : 'Issues found with dooor TEE verification'}
+                              {validationResult.valid ? 'Dooor TEE platform is authenticated and secure' : 'Issues found with Dooor TEE verification'}
                             </p>
                           </div>
                         </div>
@@ -393,7 +386,7 @@ export default function TEEExplorer() {
                         <div className="p-4 bg-muted/20 rounded-lg border border-muted/30">
                           <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Trusted</div>
                           <div className="font-medium text-card-foreground">
-                            {String(validationResult.summary?.trusted ? 'Yes' : 'No')}
+                            {validationResult.summary?.trusted ? 'Yes' : 'No'}
                           </div>
                         </div>
                         <div className="p-4 bg-muted/20 rounded-lg border border-muted/30">
@@ -420,7 +413,7 @@ export default function TEEExplorer() {
                       {validationResult.errors && validationResult.errors.length > 0 && (
                         <div className="p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
                           <h4 className="font-medium text-destructive mb-2 flex items-center gap-2">
-                            <span>⚠️</span> Issues Found
+                            <MdWarning className="w-4 h-4" /> Issues Found
                           </h4>
                           <ul className="space-y-1">
                             {validationResult.errors.map((error, index) => (
@@ -443,6 +436,88 @@ export default function TEEExplorer() {
                           <pre className="text-xs text-muted-foreground overflow-x-auto p-3 bg-background/50 rounded border">
                             {String(JSON.stringify(validationResult.claims, null, 2))}
                           </pre>
+                        </div>
+                      )}
+
+                      {/* Security Summary */}
+                      {(validationResult.summary.firewall_active !== undefined || validationResult.securityConfig) && (
+                        <div className="p-4 bg-muted/10 border border-muted/30 rounded-lg">
+                          <h4 className="font-medium text-card-foreground mb-3 flex items-center gap-2">
+                            <Shield className="w-4 h-4" />
+                            Security Summary
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Firewall Active:</span>
+                              <span className="text-card-foreground font-medium">
+                                {validationResult.summary.firewall_active ? 'Yes' : 'No'}
+                              </span>
+                            </div>
+                            {validationResult.summary.whitelisted_domains !== undefined && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Whitelisted Domains:</span>
+                                <span className="text-card-foreground font-medium">
+                                  {validationResult.summary.whitelisted_domains}
+                                </span>
+                              </div>
+                            )}
+                            {validationResult.summary.total_http_calls !== undefined && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Total HTTP Calls:</span>
+                                <span className="text-card-foreground font-medium">
+                                  {validationResult.summary.total_http_calls}
+                                </span>
+                              </div>
+                            )}
+                            {validationResult.summary.last_updated && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Last Updated:</span>
+                                <span className="text-card-foreground font-medium text-xs">
+                                  {validationResult.summary.last_updated}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Firewall Configuration */}
+                          {validationResult.securityConfig?.allowed_domains && (
+                            <div className="mt-4 pt-3 border-t border-muted/30">
+                              <h5 className="font-medium text-card-foreground mb-2 flex items-center gap-2">
+                                <MdSecurity className="w-4 h-4" /> Firewall Configuration
+                              </h5>
+                              <pre className="text-xs text-muted-foreground overflow-x-auto p-3 bg-background/50 rounded border">
+{String(JSON.stringify(validationResult.securityConfig.allowed_domains, null, 2))}
+                              </pre>
+                            </div>
+                          )}
+
+                          {/* Security Errors */}
+                          {validationResult.securityErrors && validationResult.securityErrors.length > 0 && (
+                            <div className="mt-4 pt-3 border-t border-muted/30">
+                              <h5 className="font-medium text-destructive mb-2 flex items-center gap-2">
+                                <MdBugReport className="w-4 h-4" /> Security Errors:
+                              </h5>
+                              <ul className="space-y-1">
+                                {validationResult.securityErrors.map((error, index) => (
+                                  <li key={index} className="text-xs text-destructive">• {error}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Security Warnings */}
+                          {validationResult.securityWarnings && validationResult.securityWarnings.length > 0 && (
+                            <div className="mt-4 pt-3 border-t border-muted/30">
+                              <h5 className="font-medium text-yellow-600 mb-2 flex items-center gap-2">
+                                <MdWarning className="w-4 h-4" /> Security Warnings:
+                              </h5>
+                              <ul className="space-y-1">
+                                {validationResult.securityWarnings.map((warning, index) => (
+                                  <li key={index} className="text-xs text-yellow-600">• {warning}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -512,7 +587,10 @@ export default function TEEExplorer() {
                 <CardContent>
                   {error && (
                     <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                      <p className="text-destructive font-medium">❌ Error: {error}</p>
+                      <div className="flex items-center gap-2">
+                        <MdError className="w-4 h-4" />
+                        <p className="text-destructive font-medium">Error: {error}</p>
+                      </div>
                     </div>
                   )}
                   
@@ -522,9 +600,19 @@ export default function TEEExplorer() {
                         ? 'bg-tee-success/10 border-tee-success/20' 
                         : 'bg-destructive/10 border-destructive/20'
                       }`}>
-                        <p className={`font-medium ${validationResult.valid ? 'text-tee-success' : 'text-destructive'}`}>
-                          {validationResult.valid ? '✅ JWT Valid' : '❌ JWT Invalid'}
-                        </p>
+                        <div className={`font-medium flex items-center gap-2 ${validationResult.valid ? 'text-tee-success' : 'text-destructive'}`}>
+                          {validationResult.valid ? (
+                            <>
+                              <MdCheckCircle className="w-5 h-5" />
+                              JWT Valid
+                            </>
+                          ) : (
+                            <>
+                              <MdError className="w-5 h-5" />
+                              JWT Invalid
+                            </>
+                          )}
+                        </div>
                       </div>
                       
                       {validationResult.claims && (
@@ -729,7 +817,7 @@ export default function TEEExplorer() {
                   {error && (
                     <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">❌</span>
+                        <MdError className="w-5 h-5 text-destructive" />
                         <p className="text-destructive font-medium">Error: {error}</p>
                       </div>
                     </div>
@@ -743,9 +831,9 @@ export default function TEEExplorer() {
                         : 'bg-destructive/10 border-destructive/20'
                       }`}>
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">
-                            {auditorHealth.status === 'healthy' ? '✅' : '❌'}
-                          </span>
+                          <div className="text-2xl">
+                            {auditorHealth.status === 'healthy' ? <MdCheckCircle className="w-8 h-8 text-tee-success" /> : <MdError className="w-8 h-8 text-destructive" />}
+                          </div>
                           <div>
                             <p className={`font-medium text-lg ${auditorHealth.status === 'healthy' ? 'text-tee-success' : 'text-destructive'}`}>
                               {auditorHealth.status === 'healthy' ? 'Auditor System Healthy' : 'Auditor System Issues'}
@@ -775,7 +863,7 @@ export default function TEEExplorer() {
                       {/* Audit Results Header */}
                       <div className="p-4 bg-tee-success/10 border border-tee-success/20 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">🔍</span>
+<MdSearch className="w-8 h-8 text-tee-success" />
                           <div>
                             <p className="font-medium text-lg text-tee-success">
                               Code Audit Complete
@@ -824,7 +912,7 @@ export default function TEEExplorer() {
                   <div>
                     <CardTitle className="text-xl text-card-foreground">TEE Knowledge Center</CardTitle>
                     <CardDescription className="text-card-foreground/80">
-                      Complete guide to Trusted Execution Environments and dooor&apos;s implementation
+                      Complete guide to Trusted Execution Environments and Dooor implementation
                     </CardDescription>
                   </div>
                 </div>
@@ -862,7 +950,7 @@ export default function TEEExplorer() {
                 <CardHeader>
                   <CardTitle className="text-xl text-card-foreground">Understanding Trusted Execution Environments</CardTitle>
                   <CardDescription className="text-card-foreground/80">
-                    Comprehensive guide to TEE technology and dooor&apos;s revolutionary implementation
+                    Comprehensive guide to TEE technology and Dooor revolutionary implementation
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -894,7 +982,7 @@ export default function TEEExplorer() {
                         </div>
                         <p className="text-sm text-card-foreground/90">
                           Hardware-signed proof of system integrity, allowing remote verification of the 
-                          TEE&apos;s authenticity and the code running within it.
+                          TEE authenticity and the code running within it.
                         </p>
                       </div>
                       <div className="p-4 bg-muted/30 rounded-lg">
@@ -939,9 +1027,9 @@ export default function TEEExplorer() {
                       </div>
                     </div>
 
-                                         <h3 className="text-lg font-semibold text-card-foreground mb-3">dooor&apos;s TEE Innovation</h3>
+                                         <h3 className="text-lg font-semibold text-card-foreground mb-3">Dooor&apos;s TEE Innovation</h3>
                      <p className="mb-4">
-                       dooor has pioneered several breakthrough innovations in TEE technology, combining cutting-edge 
+                     Dooor has pioneered several breakthrough innovations in TEE technology, combining cutting-edge 
                        hardware security with AI-powered auditing to create the most advanced secure computing platform available.
                      </p>
 
@@ -1130,7 +1218,7 @@ Verification: O(log n) vs O(n) for full state`}
 
                     <h3 className="text-lg font-semibold text-card-foreground mb-3">Hardware Security Architecture</h3>
                                           <p className="mb-4">
-                       dooor&apos;s TEE infrastructure leverages state-of-the-art hardware security features to provide 
+                                          Dooor TEE infrastructure leverages state-of-the-art hardware security features to provide 
                        unprecedented protection for sensitive computations.
                       </p>
 
@@ -1242,7 +1330,7 @@ Verification: O(log n) vs O(n) for full state`}
                   <div className="prose prose-sm max-w-none text-card-foreground/90">
                     <h3 className="text-lg font-semibold text-card-foreground mb-3">Advanced AI Security Auditor</h3>
                     <p className="mb-4">
-                      dooor&apos;s revolutionary AI auditor is a sophisticated LLM-based system that operates within the TEE itself, 
+                      Dooor&apos;s revolutionary AI auditor is a sophisticated LLM-based system that operates within the TEE itself, 
                       providing continuous security monitoring, threat detection, and compliance validation. The auditor 
                       uses machine learning models trained on security patterns to detect anomalies and vulnerabilities 
                       in real-time.
@@ -1297,7 +1385,7 @@ Verification: O(log n) vs O(n) for full state`}
 
                     <h3 className="text-lg font-semibold text-card-foreground mb-3">Network Security Architecture</h3>
                     <p className="mb-4">
-                                             dooor implements a military-grade network security architecture with zero-trust principles, 
+                                             Dooor implements a military-grade network security architecture with zero-trust principles, 
                       deep packet inspection, and AI-powered threat detection to prevent any unauthorized data 
                       exfiltration or malicious network activity.
                     </p>
@@ -1604,7 +1692,7 @@ sudo iptables -L -n -v`}
               <CardContent className="space-y-6">
                 <div className="prose prose-sm max-w-none text-card-foreground/90">
                   <p className="mb-4">
-                    This dooor TEE platform instance is currently deployed on Google Cloud&apos;s Confidential Computing 
+                    This Dooor TEE platform instance is currently deployed on Google Cloud&apos;s Confidential Computing 
                     infrastructure, providing hardware-enforced security through AMD SEV-SNP technology. All 
                     computations run within a verified Trusted Execution Environment with cryptographic attestation.
                   </p>
@@ -1692,6 +1780,42 @@ sudo iptables -L -n -v`}
                     </div>
                   </div>
                 </div>
+
+                {/* Open Source Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-card-foreground mb-3">Open Source Frontend</h3>
+                  
+                  <div className="p-4 bg-muted/20 border border-muted/40 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <FaCode className="w-5 h-5 text-primary mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-card-foreground/90 mb-3">
+                          This is an open source frontend application that performs security validations against the Dooor TEE server infrastructure. 
+                          The complete source code, documentation, and contribution guidelines are publicly available for transparency and community collaboration.
+                        </p>
+                        
+                        <div className="flex items-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                          <FaEye className="w-4 h-4 text-primary" />
+                          <span className="text-sm font-medium text-primary">
+                            Repository: 
+                            <a 
+                              href="https://github.com/Dooor-AI/explorer" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="ml-1 underline hover:text-primary/80 transition-colors"
+                            >
+                              https://github.com/Dooor-AI/explorer
+                            </a>
+                          </span>
+                        </div>
+                        
+                        <div className="mt-3 text-xs text-card-foreground/70">
+                          <p>Built with Next.js, TypeScript, and Tailwind CSS • Licensed under MIT</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -1766,7 +1890,7 @@ sudo iptables -L -n -v`}
           <div className="px-6 py-3">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <span className="text-yellow-500 text-lg">⚠️</span>
+<MdWarning className="w-5 h-5 text-yellow-500" />
                 <span className="text-sm font-medium text-yellow-600">ALPHA PLATFORM</span>
               </div>
               <div className="flex-1">
