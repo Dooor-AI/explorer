@@ -19,6 +19,8 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copiedHash, setCopiedHash] = useState<string | null>(null)
+  const [showAllHashes, setShowAllHashes] = useState(false)
+  const [showAllOps, setShowAllOps] = useState(false)
   const router = useRouter()
 
   const copyToClipboard = (hash: string) => {
@@ -110,6 +112,9 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
     )
   }
 
+  const displayedHashes = showAllHashes ? hashes : hashes.slice(0, 10)
+  const displayedOps = showAllOps ? operationsLog?.operations ?? [] : (operationsLog?.operations.slice(0, 10) ?? [])
+
   return (
     <div className="space-y-6">
        <Card className="floating-card bg-secondary/30 border-secondary/50">
@@ -127,7 +132,7 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
           </Button>
         </CardHeader>
         <CardContent>
-          {hashes.length > 0 ? (
+          {displayedHashes.length > 0 ? (
             <div className="overflow-hidden rounded-lg border border-border">
               <Table>
                 <TableHeader>
@@ -139,7 +144,7 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {hashes.map((h) => (
+                  {displayedHashes.map((h) => (
                     <TableRow key={h.id} onClick={() => handleRowClick(h)} className="cursor-pointer hover:bg-muted/30">
                       <TableCell className="font-mono text-xs">{new Date(h.createdAt).toLocaleString()}</TableCell>
                       <TableCell className="font-mono text-xs">{h.from}</TableCell>
@@ -149,6 +154,17 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
                   ))}
                 </TableBody>
               </Table>
+              {hashes.length > 10 && (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAllHashes(!showAllHashes)}
+                  >
+                    {showAllHashes ? 'See Less' : 'See More'}
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center h-40 flex items-center justify-center">
@@ -171,16 +187,16 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
           </Button>
         </CardHeader>
         <CardContent>
-          {operationsLog && operationsLog.operations.length > 0 ? (
+          {displayedOps.length > 0 ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <Card className="bg-muted/20 p-6 flex flex-col items-center justify-center">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Operations</CardTitle>
-                  <p className="text-4xl font-bold mt-2">{operationsLog.total_operations}</p>
+                  <p className="text-4xl font-bold mt-2">{operationsLog?.total_operations || 0}</p>
                 </Card>
                 <Card className="bg-muted/20 p-6 flex flex-col items-center justify-center">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Last Updated</CardTitle>
-                  <p className="text-4xl font-bold mt-2">{new Date(operationsLog.last_updated).toLocaleTimeString()}</p>
+                  <p className="text-4xl font-bold mt-2">{new Date(operationsLog?.last_updated || '').toLocaleTimeString()}</p>
                 </Card>
                 <Card className="bg-muted/20 p-6 flex flex-col items-center justify-center text-center">
                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -206,7 +222,7 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {operationsLog.operations.map((op) => (
+                    {displayedOps.map((op) => (
                       <TableRow key={op.id}>
                         <TableCell className="font-mono text-xs">{new Date(op.timestamp).toLocaleTimeString()}</TableCell>
                         <TableCell>
@@ -240,6 +256,17 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
                   </TableBody>
                 </Table>
               </div>
+              {(operationsLog && operationsLog.operations.length > 10) && (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAllOps(!showAllOps)}
+                  >
+                    {showAllOps ? 'See Less' : 'See More'}
+                  </Button>
+                </div>
+              )}
             </>
           ) : (
             <div className="text-center h-64 flex items-center justify-center">

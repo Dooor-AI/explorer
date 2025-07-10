@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
@@ -8,6 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScanHash } from '@/lib/types'
 import { Activity, ServerCrash, ArrowLeft, ShieldCheck, ShieldAlert, BadgeCheck, XCircle } from 'lucide-react'
+import { Sidebar, SidebarHeader, SidebarSection, SidebarItem } from '@/components/ui/sidebar'
+import { Zap, Code, Key as KeyIcon, BookOpen, Info, BarChart } from 'lucide-react'
 
 // Helper to convert PEM to ArrayBuffer
 function pemToArrayBuffer(pem: string) {
@@ -179,8 +182,11 @@ export default function HashDetailPage() {
     }
   }, [id, fetchHashDetail])
 
-  return (
-    <div className="p-6">
+  // Add sidebar active state (operations as default)
+  const [activeSection] = useState<'operations' | 'live-tee' | 'attested-key' | 'manual-jwt' | 'auditor' | 'learn' | 'about'>('operations')
+
+  const hashDetailUI = (
+    <>
       <Button onClick={() => router.back()} variant="outline" size="sm" className="mb-6 flex items-center gap-2">
         <ArrowLeft className="w-4 h-4" />
         Back
@@ -276,6 +282,96 @@ export default function HashDetailPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+    </>
+  )
+
+  return (
+    <div className="flex h-screen bg-background">
+      {/* Sidebar */}
+      <Sidebar className="shrink-0 bg-secondary">
+        <SidebarHeader
+          title="TEE Explorer"
+          subtitle="Security Suite"
+          logo={
+            <div className="w-20 h-20">
+              <img src="/logo-ui.png" alt="dooor Logo" className="w-full h-full object-contain" />
+            </div>
+          }
+        />
+        <div className="flex-1 overflow-y-auto">
+          <SidebarSection title="Main">
+            <SidebarItem
+              icon={BarChart}
+              label="Operations"
+              isActive={activeSection === 'operations'}
+              onClick={() => router.push('/')}
+            />
+            <SidebarItem
+              icon={Zap}
+              label="Live TEE"
+              isActive={activeSection === 'live-tee'}
+              onClick={() => router.push('/')}
+            />
+            <SidebarItem
+              icon={ShieldCheck}
+              label="Attested Key"
+              isActive={activeSection === 'attested-key'}
+              onClick={() => router.push('/')}
+            />
+            <SidebarItem
+              icon={Code}
+              label="Code Auditor"
+              isActive={activeSection === 'auditor'}
+              onClick={() => router.push('/')}
+            />
+            <SidebarItem
+              icon={KeyIcon}
+              label="Manual JWT"
+              isActive={activeSection === 'manual-jwt'}
+              onClick={() => router.push('/')}
+            />
+          </SidebarSection>
+          <SidebarSection title="Other">
+            <SidebarItem
+              icon={BookOpen}
+              label="Learn"
+              isActive={activeSection === 'learn'}
+              onClick={() => router.push('/')}
+            />
+            <SidebarItem
+              icon={Info}
+              label="Server"
+              isActive={activeSection === 'about'}
+              onClick={() => router.push('/')}
+            />
+          </SidebarSection>
+        </div>
+      </Sidebar>
+
+      {/* Main Area */}
+      <div className="flex-1 overflow-y-auto bg-background">
+        {/* Alpha Warning Banner */}
+        <div className="sticky top-0 z-50 bg-yellow-500/20 border-b border-yellow-500/30 backdrop-blur-sm">
+          <div className="px-6 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-yellow-500" />
+                <span className="text-sm font-medium text-yellow-600">ALPHA PLATFORM</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-yellow-600/90">
+                  This is an experimental TEE debug environment for testing purposes only. Not for production use.
+                </p>
+              </div>
+              <div className="text-xs text-yellow-600/70 font-mono">v0.1.0-alpha</div>
+            </div>
+          </div>
+        </div>
+
+        <main className="p-6 min-h-full">
+          {hashDetailUI}
+        </main>
       </div>
     </div>
   )
