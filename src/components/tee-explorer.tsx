@@ -46,10 +46,12 @@ import {
   MdSecurity,
   MdBugReport
 } from 'react-icons/md'
+import * as jose from 'jose'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
+import { Badge } from './ui/badge'
 import { 
   Sidebar, 
   SidebarHeader, 
@@ -64,8 +66,20 @@ import {
 } from '@/lib/types'
 import TeeOperations from './tee-operations'
 
-type ActiveSection = 'operations' | 'live-tee' | 'manual-jwt' | 'auditor' | 'learn' | 'about'
+type ActiveSection = 'operations' | 'live-tee' | 'attested-key' | 'manual-jwt' | 'auditor' | 'learn' | 'about'
 type LearnTab = 'overview' | 'technical' | 'security' | 'implementation' | 'troubleshooting'
+
+interface AttestedKeyResult {
+  publicKey: string
+  attestationJwt: string
+  verification: {
+    jwtVerified: boolean
+    nonceMatches: boolean
+    jwtClaims: jose.JWTPayload
+    publicKeyHash: string
+    eatNonce: string
+  } | null
+}
 
 export default function TEEExplorer() {
   const [activeSection, setActiveSection] = useState<ActiveSection>('operations')
@@ -77,6 +91,8 @@ export default function TEEExplorer() {
   const [auditorResult, setAuditorResult] = useState<TEEAuditResult | null>(null)
   const [auditorHealth, setAuditorHealth] = useState<TEEAuditHealth | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [attestedKeyResult, setAttestedKeyResult] = useState<AttestedKeyResult | null>(null)
+  const [isVerifyingKey, setIsVerifyingKey] = useState(false)
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [isTransparencyOpen, setIsTransparencyOpen] = useState(false)
   const auditorResultsRef = useRef<HTMLDivElement>(null)
@@ -178,6 +194,65 @@ export default function TEEExplorer() {
     }
   }
 
+  const handleAttestedKeyValidation = async () => {
+    setIsVerifyingKey(true)
+    setError(null)
+    setAttestedKeyResult(null)
+
+    let data: { publicKey: string, attestationJwt: string } | null = null
+
+    try {
+      const response = await fetch(`${teeUrl}/v1/tee/attested-public-key`)
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      data = await response.json()
+      const { publicKey, attestationJwt } = data as any
+
+      const textEncoder = new TextEncoder()
+      const keyData = textEncoder.encode(publicKey)
+      const hashBuffer = await crypto.subtle.digest('SHA-256', keyData)
+      const hashArray = Array.from(new Uint8Array(hashBuffer))
+      const publicKeyHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+      const jwksUrl = new URL('https://www.googleapis.com/service_accounts/v1/metadata/jwk/signer@confidentialspace-sign.iam.gserviceaccount.com')
+      const JWKS = jose.createRemoteJWKSet(jwksUrl)
+      
+      const { payload: jwtClaims } = await jose.jwtVerify(attestationJwt, JWKS, {
+        audience: 'tee-key-attestation',
+      })
+
+      const jwtVerified = true
+      const eatNonce = jwtClaims.eat_nonce as string
+      
+      const nonceMatches = (eatNonce === publicKeyHash)
+      
+      setAttestedKeyResult({
+        publicKey,
+        attestationJwt,
+        verification: {
+          jwtVerified,
+          nonceMatches,
+          jwtClaims,
+          publicKeyHash,
+          eatNonce,
+        }
+      })
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred')
+      if (data) {
+        setAttestedKeyResult({
+          publicKey: data.publicKey,
+          attestationJwt: data.attestationJwt,
+          verification: null,
+        })
+      }
+    } finally {
+      setIsVerifyingKey(false)
+    }
+  }
+
   const handleManualJWTValidation = async (decodeOnly = false) => {
     if (!jwtToken.trim()) {
       setError('Please enter a JWT token')
@@ -267,6 +342,173 @@ export default function TEEExplorer() {
     switch (activeSection) {
       case 'operations':
         return <TeeOperations teeUrl={teeUrl} />
+      case 'attested-key':
+        return (
+          <div className="space-y-6">
+            <Card className="floating-card bg-secondary/30 border-secondary/50">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                    <ShieldCheck className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl text-card-foreground">Attested Public Key</CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      Fetch the TEE public key and verify its cryptographic attestation.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={handleAttestedKeyValidation}
+                  disabled={isVerifyingKey}
+                  variant="default"
+                  className="flex items-center gap-2 h-12 bg-secondary/70 text-secondary-foreground hover:bg-secondary/90 border border-secondary/50"
+                >
+                  {isVerifyingKey ? <Activity className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                  Fetch & Verify Key
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="floating-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Info className="w-5 h-5 text-primary"/> How It Works</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm text-card-foreground/90">
+                <p>
+                  This feature demonstrates a critical security guarantee of a Trusted Execution Environment (TEE): <strong>cryptographic attestation</strong>. It allows an external client (like your browser) to obtain the TEE's public key and receive mathematical proof that this key is genuine and originates from within the secure, isolated environment.
+                </p>
+                <div className="p-4 bg-muted/20 border border-muted/30 rounded-lg">
+                  <h4 className="font-medium text-card-foreground mb-3">The Verification Flow:</h4>
+                  <ol className="list-decimal list-inside space-y-2 text-xs">
+                    <li><strong>Request:</strong> The explorer requests the attested public key from the Dooor TEE Platform.</li>
+                    <li><strong>Response:</strong> The TEE returns its public key along with a specially crafted JSON Web Token (JWT), the `attestationJwt`.</li>
+                    <li><strong>Hashing:</strong> The explorer computes the SHA-256 hash of the received public key.</li>
+                    <li><strong>JWT Verification:</strong> The signature of the `attestationJwt` is verified against Google's public keys. This proves the JWT was genuinely issued by Google Cloud for a specific TEE instance.</li>
+                    <li><strong>Nonce Extraction:</strong> Inside the verified JWT, we find a special claim called `eat_nonce`.</li>
+                    <li><strong>Comparison:</strong> The `eat_nonce` value is compared with the public key hash calculated in step 3.</li>
+                  </ol>
+                </div>
+                <div className="p-4 bg-tee-success/10 border border-tee-success/20 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <ShieldCheck className="w-8 h-8 text-tee-success mt-1 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-tee-success">The "Aha!" Moment</h4>
+                      <p className="text-xs text-tee-success/90">
+                        If the `eat_nonce` (a "nonce" provided by the entity being attested) matches the hash of the public key, we have cryptographic proof. It confirms that the Google-signed TEE is attesting to the authenticity of this specific public key, effectively saying: "I am a real TEE, and I vouch for this public key."
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {(attestedKeyResult || error) && (
+              <Card className="floating-card bg-secondary/20 border-secondary/40">
+                <CardHeader>
+                  <CardTitle className="text-lg text-card-foreground">Verification Result</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {error && (
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
+                      <div className="flex items-center gap-2">
+                        <MdError className="w-5 h-5 text-destructive" />
+                        <p className="text-destructive font-medium">Error: {error}</p>
+                      </div>
+                    </div>
+                  )}
+                  {attestedKeyResult && (
+                    <div className="space-y-6">
+                      {attestedKeyResult.verification && (
+                        <div className={`p-4 rounded-lg border ${
+                          attestedKeyResult.verification.jwtVerified && attestedKeyResult.verification.nonceMatches
+                            ? 'bg-tee-success/10 border-tee-success/20' 
+                            : 'bg-destructive/10 border-destructive/20'
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <div className="text-2xl">
+                              {attestedKeyResult.verification.jwtVerified && attestedKeyResult.verification.nonceMatches ? (
+                                <MdCheckCircle className="w-8 h-8 text-tee-success" />
+                              ) : (
+                                <MdError className="w-8 h-8 text-destructive" />
+                              )}
+                            </div>
+                            <div>
+                              <p className={`font-medium text-lg ${
+                                attestedKeyResult.verification.jwtVerified && attestedKeyResult.verification.nonceMatches
+                                  ? 'text-tee-success' : 'text-destructive'
+                              }`}>
+                                {attestedKeyResult.verification.jwtVerified && attestedKeyResult.verification.nonceMatches
+                                  ? 'Verification Successful' : 'Verification Failed'}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {attestedKeyResult.verification.jwtVerified && attestedKeyResult.verification.nonceMatches
+                                  ? 'The public key has been cryptographically attested by the TEE.'
+                                  : 'The public key could not be verified.'
+                                }
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="p-4 bg-muted/10 border border-muted/30 rounded-lg">
+                        <h4 className="font-medium text-card-foreground mb-3 flex items-center gap-2">
+                          <Key className="w-4 h-4" />
+                          TEE Public Key
+                        </h4>
+                        <pre className="text-xs text-muted-foreground overflow-x-auto p-3 bg-background/50 rounded border">
+                          {attestedKeyResult.publicKey}
+                        </pre>
+                      </div>
+
+                      {attestedKeyResult.verification && (
+                        <div className="p-4 bg-muted/10 border border-muted/30 rounded-lg">
+                          <h4 className="font-medium text-card-foreground mb-3 flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4" />
+                            Verification Details
+                          </h4>
+                          <div className="space-y-3 text-sm">
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground">JWT Signature Verified:</span>
+                              {attestedKeyResult.verification.jwtVerified ? <Badge variant="default" className="bg-tee-success/80 text-tee-success-foreground">✅ Verified</Badge> : <Badge variant="destructive">❌ Failed</Badge>}
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground">Nonce Matches Hash:</span>
+                              {attestedKeyResult.verification.nonceMatches ? <Badge variant="default" className="bg-tee-success/80 text-tee-success-foreground">✅ Match</Badge> : <Badge variant="destructive">❌ Mismatch</Badge>}
+                            </div>
+                            <div>
+                              <div className="text-muted-foreground text-xs mb-1">Computed SHA256(PublicKey)</div>
+                              <pre className="text-xs font-mono bg-background/50 p-2 rounded border break-all">{attestedKeyResult.verification.publicKeyHash}</pre>
+                            </div>
+                            <div>
+                              <div className="text-muted-foreground text-xs mb-1">JWT `eat_nonce` Claim</div>
+                              <pre className="text-xs font-mono bg-background/50 p-2 rounded border break-all">{attestedKeyResult.verification.eatNonce}</pre>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {attestedKeyResult.verification?.jwtClaims && (
+                        <div className="p-4 bg-muted/10 border border-muted/30 rounded-lg">
+                          <h4 className="font-medium text-card-foreground mb-3 flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Attestation JWT Claims
+                          </h4>
+                          <pre className="text-xs text-muted-foreground overflow-x-auto p-3 bg-background/50 rounded border">
+                            {JSON.stringify(attestedKeyResult.verification.jwtClaims, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )
       case 'live-tee':
         return (
           <div className="space-y-6">
@@ -2225,6 +2467,12 @@ sudo iptables -L -n -v`}
               label="Live TEE"
               isActive={activeSection === 'live-tee'}
               onClick={() => setActiveSection('live-tee')}
+            />
+            <SidebarItem
+              icon={ShieldCheck}
+              label="Attested Key"
+              isActive={activeSection === 'attested-key'}
+              onClick={() => setActiveSection('attested-key')}
             />
             <SidebarItem
               icon={Code}

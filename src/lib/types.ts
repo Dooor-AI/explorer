@@ -150,6 +150,23 @@ export interface TEEOperationsLog {
   tee_verification: string;
 }
 
+export interface ScanHash {
+  id: string;
+  hash: string;
+  messageId: string;
+  from: string;
+  providerFrom: string;
+  providerAddressFrom: string;
+  processingTimeMs: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScansHashesResponse {
+  totalValue: number;
+  hashs: ScanHash[];
+}
+
 export interface TEEExecutionLog {
   session_id: string
   verification_info?: {
