@@ -89,7 +89,7 @@ interface AttestedKeyResult {
 export default function TEEExplorer() {
   const [activeSection, setActiveSection] = useState<ActiveSection>('operations')
   const [activeLearnTab, setActiveLearnTab] = useState<LearnTab>('overview')
-  const [teeUrl, setTeeUrl] = useState('https://api-tee.dooor.ai')
+  const [teeUrl, setTeeUrl] = useState(process.env.NEXT_PUBLIC_TEE_API || '')
   const [jwtToken, setJwtToken] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [validationResult, setValidationResult] = useState<TEEValidationReport | null>(null)
@@ -547,7 +547,7 @@ export default function TEEExplorer() {
                             id="teeUrl"
                             value={teeUrl}
                             onChange={(e) => setTeeUrl(e.target.value)}
-                            placeholder="https://api-tee.dooor.ai (Dooor TEE platform)"
+                            placeholder={`${process.env.NEXT_PUBLIC_TEE_API} (Dooor TEE platform)`}
                             className="bg-input/50 border-border/50 text-foreground h-11 font-mono text-sm"
                           />
                       </div>
