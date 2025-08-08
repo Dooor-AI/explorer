@@ -23,7 +23,7 @@ export class TEEAttestationValidator {
 
   async connectToTEE(url: string): Promise<string> {
     try {
-      const response = await fetch(`${url}/v1/tee/connect`, {
+      const response = await fetch(`${url}/tee/connect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -135,7 +135,7 @@ export class TEEAttestationValidator {
       }
 
       // Real security validation against TEE server
-      const response = await fetch(`${url}/v1/tee/security-config`, {
+      const response = await fetch(`${url}/tee/security-config`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -248,7 +248,7 @@ export class TEEAuditorClient {
 
   async checkHealth(): Promise<TEEAuditHealth> {
     try {
-      const response = await fetch(`${this.baseUrl}/v1/tee/auditor/health`)
+      const response = await fetch(`${this.baseUrl}/tee/auditor/health`)
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -262,7 +262,7 @@ export class TEEAuditorClient {
 
   async runAudit(): Promise<TEEAuditResult> {
     try {
-      const response = await fetch(`${this.baseUrl}/v1/tee/auditor/run`, {
+      const response = await fetch(`${this.baseUrl}/tee/auditor/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -279,7 +279,7 @@ export class TEEAuditorClient {
 
   async getResults(): Promise<TEEAuditResult> {
     try {
-      const response = await fetch(`${this.baseUrl}/v1/tee/auditor/results`)
+      const response = await fetch(`${this.baseUrl}/tee/auditor/results`)
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -293,7 +293,7 @@ export class TEEAuditorClient {
 
   async getExecutionLog(): Promise<TEEExecutionLog> {
     try {
-      const response = await fetch(`${this.baseUrl}/v1/tee/auditor/execution-log`)
+      const response = await fetch(`${this.baseUrl}/tee/auditor/execution-log`)
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -307,7 +307,7 @@ export class TEEAuditorClient {
 
   async getVerificationInfo(): Promise<TEEVerificationInfo> {
     try {
-      const response = await fetch(`${this.baseUrl}/v1/tee/auditor/verification`)
+      const response = await fetch(`${this.baseUrl}/tee/auditor/verification`)
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)

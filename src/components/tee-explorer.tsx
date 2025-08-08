@@ -131,7 +131,7 @@ export default function TEEExplorer() {
     setValidationResult(null)
 
     try {
-      const response = await fetch(`${teeUrl}/v1/tee/connect`, {
+      const response = await fetch(`${teeUrl}/tee/connect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -207,7 +207,7 @@ export default function TEEExplorer() {
     let data: { publicKey: string, attestationJwt: string } | null = null
 
     try {
-      const response = await fetch(`${teeUrl}/v1/tee/attested-public-key`)
+      const response = await fetch(`${teeUrl}/tee/attested-public-key`)
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
@@ -220,7 +220,7 @@ export default function TEEExplorer() {
       const hashArray = Array.from(new Uint8Array(hashBuffer))
       const publicKeyHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 
-      const jwksUrl = new URL('https://www.googleapis.com/service_accounts/v1/metadata/jwk/signer@confidentialspace-sign.iam.gserviceaccount.com')
+      const jwksUrl = new URL('https://www.googleapis.com/service_accounts/metadata/jwk/signer@confidentialspace-sign.iam.gserviceaccount.com')
       const JWKS = jose.createRemoteJWKSet(jwksUrl)
       
       const { payload: jwtClaims } = await jose.jwtVerify(attestationJwt, JWKS, {
@@ -306,12 +306,12 @@ export default function TEEExplorer() {
 
     try {
       const endpoint = {
-        hash: '/v1/tee/auditor/hash',
-        health: '/v1/tee/auditor/health',
-        verify: '/v1/tee/auditor/verify',
-        run: '/v1/tee/auditor/run',
-        report: '/v1/tee/auditor/results',
-        logs: '/v1/tee/auditor/execution-log'
+        hash: '/tee/auditor/hash',
+        health: '/tee/auditor/health',
+        verify: '/tee/auditor/verify',
+        run: '/tee/auditor/run',
+        report: '/tee/auditor/results',
+        logs: '/tee/auditor/execution-log'
       }[action]
 
       const method = action === 'run' ? 'POST' : 'GET'

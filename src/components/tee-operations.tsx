@@ -35,8 +35,8 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
     
     try {
       const [opsResponse, hashesResponse] = await Promise.all([
-        fetch(`${teeUrl}/v1/tee/operations?limit=500`),
-        fetch(`${teeUrl}/v1/scans/hashs`)
+        fetch(`${teeUrl}/tee/operations?limit=500`),
+        fetch(`${teeUrl}/scans/hashs`)
       ]);
 
       if (!opsResponse.ok) {

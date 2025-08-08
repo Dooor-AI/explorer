@@ -238,7 +238,7 @@ async function sendSensitiveData() {
             resultDiv.innerHTML = '<div class="status warning">🔄 Connecting to TEE...</div>';
             
             try {
-                const response = await fetch(`${url}/v1/tee/connect`, {
+                const response = await fetch(`${url}/tee/connect`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -273,7 +273,7 @@ async function sendSensitiveData() {
             const resultDiv = document.getElementById('quickResult');
             
             try {
-                const response = await fetch(`${url}/v1/tee/connect`, { method: 'POST' });
+                const response = await fetch(`${url}/tee/connect`, { method: 'POST' });
                 const data = await response.json();
                 
                 // Extract the JWT from the response
@@ -301,7 +301,7 @@ async function sendSensitiveData() {
             const resultDiv = document.getElementById('quickResult');
             
             try {
-                const response = await fetch(`${url}/v1/tee/connect`, { method: 'POST' });
+                const response = await fetch(`${url}/tee/connect`, { method: 'POST' });
                 const data = await response.json();
                 
                 // Extract the JWT from the response
@@ -538,7 +538,7 @@ async function sendSensitiveData() {
             resultDiv.innerHTML = '<div class="status warning">🔄 Checking auditor health...</div>';
             
             try {
-                const response = await fetch(`${url}/v1/tee/auditor/health`);
+                const response = await fetch(`${url}/tee/auditor/health`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -560,7 +560,7 @@ async function sendSensitiveData() {
             resultDiv.innerHTML = '<div class="status warning">🔄 Running transparent code audit... This may take a few minutes.</div>';
             
             try {
-                const response = await fetch(`${url}/v1/tee/auditor/run`, {
+                const response = await fetch(`${url}/tee/auditor/run`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -585,7 +585,7 @@ async function sendSensitiveData() {
             resultDiv.innerHTML = '<div class="status warning">🔄 Fetching audit results...</div>';
             
             try {
-                const response = await fetch(`${url}/v1/tee/auditor/results`);
+                const response = await fetch(`${url}/tee/auditor/results`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -607,7 +607,7 @@ async function sendSensitiveData() {
             resultDiv.innerHTML = '<div class="status warning">🔄 Fetching execution log...</div>';
             
             try {
-                const response = await fetch(`${url}/v1/tee/auditor/execution-log`);
+                const response = await fetch(`${url}/tee/auditor/execution-log`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -629,7 +629,7 @@ async function sendSensitiveData() {
             resultDiv.innerHTML = '<div class="status warning">🔄 Fetching verification info...</div>';
             
             try {
-                const response = await fetch(`${url}/v1/tee/auditor/verification`);
+                const response = await fetch(`${url}/tee/auditor/verification`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -798,7 +798,7 @@ async function sendSensitiveData() {
             try {
                 resultDiv.innerHTML = '<div class="status warning">🔄 Loading operation logs...</div>';
                 
-                const response = await fetch(`${url}/v1/tee/operations?limit=${limit}`);
+                const response = await fetch(`${url}/tee/operations?limit=${limit}`);
                 const data = await response.json();
                 
                 if (response.ok && data.operations) {
@@ -861,7 +861,7 @@ async function sendSensitiveData() {
             const statsDiv = document.getElementById('operationStats');
             
             try {
-                const response = await fetch(`${url}/v1/tee/operations?limit=1`);
+                const response = await fetch(`${url}/tee/operations?limit=1`);
                 const data = await response.json();
                 
                 if (response.ok && data.statistics) {
@@ -893,7 +893,7 @@ async function sendSensitiveData() {
             const url = document.getElementById('teeUrl').value;
             
             try {
-                const response = await fetch(`${url}/v1/tee/operations/${operationId}`);
+                const response = await fetch(`${url}/tee/operations/${operationId}`);
                 const data = await response.json();
                 
                 if (response.ok) {

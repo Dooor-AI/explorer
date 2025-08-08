@@ -91,7 +91,7 @@ export default function HashDetailPage() {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_TEE_API}/v1/scans/hashs/${hashId}`)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_TEE_API}/scans/hashs/${hashId}`)
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
@@ -117,7 +117,7 @@ export default function HashDetailPage() {
     try {
       // 1. Fetch the attested public key
       console.log("Step 1: Fetching TEE public key...");
-      const keyRes = await fetch(`${process.env.NEXT_PUBLIC_TEE_API}/v1/tee/attested-public-key`)
+      const keyRes = await fetch(`${process.env.NEXT_PUBLIC_TEE_API}/tee/attested-public-key`)
       if (!keyRes.ok) throw new Error('Could not fetch TEE public key.')
       const { publicKey: publicKeyPem } = await keyRes.json()
       console.log("Public Key PEM:\n", publicKeyPem);
