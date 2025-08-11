@@ -57,7 +57,9 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
       setHashes(hashesData.hashs || []);
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+      console.error(err)
+      setHashes([])
+      // setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
       setIsLoading(false)
     }
@@ -112,7 +114,7 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
     )
   }
 
-  const displayedHashes = showAllHashes ? hashes : hashes.slice(0, 10)
+  const displayedHashes = showAllHashes ? hashes : hashes?.slice(0, 10) ?? []
   const displayedOps = showAllOps ? operationsLog?.operations ?? [] : (operationsLog?.operations.slice(0, 10) ?? [])
 
   return (
@@ -144,12 +146,12 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayedHashes.map((h) => (
+                  {displayedHashes?.map((h) => (
                     <TableRow key={h.id} onClick={() => handleRowClick(h)} className="cursor-pointer hover:bg-muted/30">
-                      <TableCell className="font-mono text-xs">{new Date(h.createdAt).toLocaleString()}</TableCell>
-                      <TableCell className="font-mono text-xs">{h.from}</TableCell>
-                      <TableCell className="font-mono text-xs">{h.hash.substring(0, 20)}...</TableCell>
-                      <TableCell className="text-right">{h.processingTimeMs}</TableCell>
+                      <TableCell className="font-mono text-xs">{new Date(h?.createdAt).toLocaleString()}</TableCell>
+                      <TableCell className="font-mono text-xs">{h?.from}</TableCell>
+                      <TableCell className="font-mono text-xs">{h?.hash?.substring(0, 20)}...</TableCell>
+                      <TableCell className="text-right">{h?.processingTimeMs}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -233,17 +235,17 @@ export default function TeeOperations({ teeUrl }: TeeOperationsProps) {
                         <TableCell>
                           <Badge variant={getStatusVariant(op.status_code)}>{op.status_code}</Badge>
                         </TableCell>
-                        <TableCell className="font-mono text-xs">{op.user_id.substring(0, 8)}...</TableCell>
+                        <TableCell className="font-mono text-xs">{op?.user_id?.substring(0, 8)}...</TableCell>
                         <TableCell className="font-mono text-xs text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <span>{op.operation_hash.substring(0, 8)}...</span>
+                            <span>{op?.operation_hash?.substring(0, 8)}...</span>
                             <Button
                               variant="ghost"
                               size="icon"
                               className="w-6 h-6"
-                              onClick={() => copyToClipboard(op.operation_hash)}
+                              onClick={() => copyToClipboard(op?.operation_hash)}
                             >
-                              {copiedHash === op.operation_hash ? (
+                              {copiedHash === op?.operation_hash ? (
                                 <Check className="w-3 h-3 text-green-500" />
                               ) : (
                                 <Copy className="w-3 h-3" />

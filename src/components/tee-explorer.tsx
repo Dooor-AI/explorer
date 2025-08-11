@@ -133,7 +133,12 @@ export default function TEEExplorer() {
     try {
       const response = await fetch(`${teeUrl}/tee/connect`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          ...(process.env.NEXT_PUBLIC_PARSE_APP_ID ? { 'X-Parse-Application-Id': process.env.NEXT_PUBLIC_PARSE_APP_ID } : {}),
+          ...(process.env.NEXT_PUBLIC_PARSE_SESSION_TOKEN ? { 'x-parse-session-token': process.env.NEXT_PUBLIC_PARSE_SESSION_TOKEN } : {}),
+        },
+        body: JSON.stringify({ uid: typeof window !== 'undefined' ? (window.crypto?.randomUUID?.() || String(Date.now())) : String(Date.now()) })
       })
 
       if (!response.ok) {

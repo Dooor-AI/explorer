@@ -98,7 +98,9 @@ export default function HashDetailPage() {
       const data: ScanHash = await response.json()
       setHashDetail(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+      console.error(err)
+      setHashDetail(null)
+      // setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
       setIsLoading(false)
     }
@@ -136,7 +138,7 @@ export default function HashDetailPage() {
 
       // 3. Prepare the data that was signed
       console.log("\nStep 3: Preparing data for verification...");
-      const originalMessage = `${hashDetail.messageId}:${messageToVerify}`
+      const originalMessage = `${hashDetail?.messageId}:${messageToVerify}`
       console.log("Original message string to be verified:", originalMessage);
 
       const encoder = new TextEncoder()
@@ -145,7 +147,7 @@ export default function HashDetailPage() {
       
       // 4. Prepare the signature
       console.log("\nStep 4: Preparing signature...");
-      const signatureB64 = hashDetail.hash;
+      const signatureB64 = hashDetail?.hash;
       console.log("Signature from details (Base64):", signatureB64);
       
       const signatureDer = Uint8Array.from(atob(signatureB64), c => c.charCodeAt(0)).buffer;
